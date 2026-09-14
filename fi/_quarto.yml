@@ -15,7 +15,7 @@ book:
   date: "today"
   language: fi
   cover-image: "../Cover/cover-artv3.png"
-  repo-url: https://github.com/Mikko-Huuskonen-Pro/Vaino-book
+  repo-url: https://github.com/unsafezig/Vaino-book
   repo-actions: [edit, issue]
   chapters:
     - index.qmd
@@ -49,4 +49,4 @@ format:
       dark: [darkly, ../Assets/theme-dark.scss]
 
 website:
-  site-url: https://mikko-huuskonen-pro.github.io/Vaino-book/fi/
+  site-url: https://unsafezig.github.io/Vaino-book/fi/

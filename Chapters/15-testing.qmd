@@ -1,0 +1,42 @@
+---
+description: "Host tests, QEMU tests, and CI"
+---
+
+# Testing strategy
+
+## Three layers
+
+```
+┌─────────────────┐
+│   Host tests    │  bitmap, fmt, ring buffer, scope, manifest…
+│ (zig build test)│  normal std, fast feedback
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│   QEMU tests    │  boot → serial output assertions
+│ (boot-test/CI)  │  "Full boot OK" → pass
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│   GDB + QEMU    │  manual debugging during development
+└─────────────────┘
+```
+
+Host tests (`tests/host/`, `zig build test`) cover pure logic: PMM, heap core, capabilities, ports, ELF parsing, VFS, scope, manifests, signing, and registries. QEMU tests (`zig build boot-test`) assert the serial log line by line — every phase in the roadmap ends with an expected marker, and CI fails until all of them appear.
+
+## Rules
+
+- Deterministic tests first; fake devices before real hardware.
+- A fake device must model real behavior (timeouts, races, bad sequences) — never a mock that accepts everything.
+- Never weaken a test to make development convenient; CI failures are data.
+- The 1.0 gate workflow stays red until every requirement has evidence — the failing status is intentional: *we are not at 1.0 yet*.
+
+## Debugging a failure
+
+```bash
+zig build test          # fast: did pure logic break?
+zig build               # does the freestanding kernel still compile?
+zig build boot-test     # which serial marker is missing?
+```
+
+The first missing marker names the broken phase; the chapter for that phase names the files.

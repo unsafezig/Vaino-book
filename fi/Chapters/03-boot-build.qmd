@@ -1,0 +1,98 @@
+---
+translation:
+  source: Chapters/03-boot-build.qmd
+  source_sha256: 5a8dfeeed18a0da150215535275096bc8e1b47ebcf537bcecd1f6d6bdac0f8a3
+  status: complete
+---
+
+# Bootti ja käännös
+
+**Labra 1.** Tässä luvussa käännät kernelin, luot bootattavan ISO:n ja boottaat sen QEMU:ssa.
+
+## Esivaatimukset
+
+- Zig 0.16.0 (ks. Zinuxin `.zigversion`)
+- `xorriso`, `curl`, `cc` `iso`-vaiheeseen
+- `qemu-system-x86_64` `run`-vaiheeseen
+
+## Käännösvaiheet
+
+`build.zig` hoitaa kaiken — ei ulkoisia skriptejä:
+
+| Vaihe | Komento | Tulos |
+|-------|---------|-------|
+| Käännös | `zig build` | `zig-out/bin/zinux-kernel` (ELF) |
+| ISO | `zig build iso` | Bootattava ISO Liminellä |
+| Savutesti | `zig build run` | QEMU-bootti, pysähtyy `Smoke boot OK` (~10 s) |
+| Täydet testit | `zig build boot-test` | QEMU-integraatiosarja, pysähtyy `Full boot OK` |
+| Dev-tila | `zig build run -Dboot=dev` | Interaktiivinen scheduler, ei pysähdy |
+| Host-testit | `zig build test` | Yksikkötestit host-Zigillä |
+
+```bash
+zig build
+zig build iso
+zig build run
+# Odotettu sarjatuloste:
+# [Zinux] boot OK
+```
+
+## Mitä bootissa tapahtuu
+
+1. **Limine** lataa kernel-ELFin higher halfiin ja antaa request/response-rakenteen (`kernel/boot/limine.zig`, `kernel/boot/entry.zig`).
+2. **`_start`** pystyttää varhaisen pinon ja kutsuu `kmain`:ia (`kernel/main.zig`).
+3. Varhaiset ajurit alustuvat: VGA-tekstitila (`kernel/drivers/video/vga.zig`) ja UART COM1 (`kernel/drivers/char/uart.zig`).
+4. Lokimoduuli (`kernel/lib/log.zig`) kirjoittaa sekä sarjaan että VGA:han.
+5. Muisti, scheduler, syscallit ja boottitestit alustuvat järjestyksessä — jokainen tulostaa merkkinsä sarjalokiin, jota CI vertaa.
+
+## Higher-half-kerneli
+
+Kerneli linkitetään osoitteeseen `0xFFFFFFFF80000000` (ks. `linker.ld`):
+
+```
+Virtuaalinen osoiteavaruus (x86_64):
+
+0xFFFF_FFFF_FFFF_FFFF ┐
+                      │  Kernel higher-half (-2 GiB)
+0xFFFF_FFFF_8000_0000 ┤  kernel .text, .data, .bss
+                      │
+0xFFFF_8000_0000_0000 ┤  Fyysisen RAMin suora mappaus (-128 GiB)
+                      │
+0x0000_0000_0000_0000 ┴  Käyttäjätila
+```
+
+Limine antaa HHDM-offsetin (higher-half direct map); identiteettimappaus poistetaan bootin jälkeen turvallisuuden vuoksi.
+
+## Freestanding-asetukset
+
+```zig
+const kernel_exe = b.addExecutable(.{
+    .name = "zinux-kernel",
+    .root_source_file = b.path("kernel/main.zig"),
+    .target = b.resolveTargetQuery(.{
+        .cpu_arch = .x86_64,
+        .os_tag = .freestanding,
+        .abi = .none,
+    }),
+    .optimize = optimize,
+});
+kernel_exe.setLinkerScript(b.path("linker.ld"));
+kernel_exe.root_module.red_zone = false;
+kernel_exe.root_module.stack_protector = false;
+```
+
+Vain `linker.ld`, `limine.conf` ja CI-YAML elävät Zigin ulkopuolella — ja linkkeriskripti on dokumentoitu rivi riviltä.
+
+## Labra 1 — boottaa
+
+```bash
+cd Zinux
+zig build iso && zig build run
+```
+
+Onnistuminen näyttää sarjakonsolissa tältä:
+
+```text
+[Zinux] boot OK
+```
+
+Jos QEMU puuttuu, `zig build` (käännös) ja `zig build test` (host-testit) varmistavat silti työkaluketjun. Luku 17 toistaa menettelyn oikealla raudalla USB-tikulta.

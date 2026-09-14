@@ -1,0 +1,50 @@
+---
+description: "Capability-checked IPC between processes"
+---
+
+# IPC and capabilities
+
+**Lab 3.** Zinux has no Unix root/setuid model. Authority is carried in **capabilities**: small, explicit, per-process handles.
+
+```
+Process A                    Kernel                     Process B
+    │                           │                            │
+    │── cap_create(port) ────────►│                            │
+    │◄── capability handle ───────│                            │
+    │                           │                            │
+    │── cap_send(port, msg) ────►│── deliver ────────────────►│
+    │                           │                            │
+```
+
+## Capability syscalls
+
+| Syscall | Purpose |
+|---------|---------|
+| `sys_cap_create` | Create a capability object (port, memory, irq) |
+| `sys_cap_delegate` | Grant a subset of rights to another process |
+| `sys_cap_transfer` | Move/copy a capability slot cross-process (gateway-checked) |
+| `sys_cap_revoke` | Revoke globally — every referencing slot dies, ports are freed |
+| `sys_cap_get_rights/type/resource` | Introspect a slot (rights mask, type, resource id) |
+| `sys_ipc_send/recv/try_recv` | Blocking send, blocking receive, non-blocking receive (`EAGAIN` if empty) |
+| `sys_ipc_pending/flush/queue_capacity` | Queue depth query, drain without receiving, max depth |
+| `sys_mem_map` | Map a page through a memory capability |
+
+Core files: `kernel/ipc/capability.zig` (+ `capability_core.zig`), `kernel/ipc/port.zig` (+ `port_core.zig`), syscall glue in `kernel/syscall/dispatch.zig`, shared numbers in `libs/zinuxabi.zig`, user wrappers in `userland/lib/ipc.zig` and `userland/lib/cap.zig`.
+
+## Small and explicit
+
+Capabilities should be as narrow as practical — `MMIO_READ(range)`, not `ACCESS_DEVICE`; `IRQ(4)`, not `ACCESS_INTERRUPTS`. Broad rights created only to simplify early development must be documented as temporary.
+
+Two fixed security findings shaped the model: `sys_cap_create` installs into the *caller's* pid (not pid 1), and `sys_cap_transfer` deduplicates into the victim's bounded 32 slots instead of filling them with copies.
+
+## Lab 3 — IPC markers
+
+```bash
+zig build boot-test
+# Expected serial lines (among others):
+# IPC syscall OK, Cap syscall OK, Cap create syscall OK
+# Cap transfer OK, Cross-process send OK
+# Userland cross spawn IPC test OK
+```
+
+Each `*_test/` directory under `userland/` is a tiny ring-3 ELF that exercises exactly one of these paths — read one before inventing a new mechanism.

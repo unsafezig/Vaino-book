@@ -1,0 +1,40 @@
+---
+description: "Checkpoints, restore, and self-healing"
+---
+
+# Snapshots and self-healing
+
+Plugins are designed to be recoverable. The snapshot mechanism belongs to the core — never to the plugins themselves.
+
+## Checkpoint and restore
+
+Phase 31.5 added full-state plugin snapshots:
+
+- `sys_plugin_checkpoint(pid)` (27): copies the plugin's user pages into PMM frames, write-protects the originals, and records writability.
+- `sys_plugin_restore(pid)` (28): copies back byte-verified, restoring original permissions. Repeatable — the checkpoint is retained until deleted.
+- Incremental snapshots: write faults (`#PF` on guarded pages) mark dirty pages; re-checkpoint copies only those.
+- Watchdog: a crash (e.g. a not-present read in ring 3) triggers automatic restore plus diagnostics.
+
+```bash
+zig build boot-test
+# Expected serial lines (among others):
+# Snapshot walk OK, Snapshot checkpoint OK, Snapshot restore OK
+# Dirty tracking OK, Crash captured, Watchdog restart OK
+```
+
+## Self-healing
+
+Phase 33 builds on snapshots: error diagnostics (`kernel/plugin_diag.zig`), an in-place reload model instead of byte-patching (`docs/SELF_HEAL.md`), a validation pipe that runs the corrected plugin sandboxed before swapping, and hot-swap orchestration (freeze → kill → rename → bridge IPC):
+
+```bash
+# Expected serial lines (among others):
+# Plugin diagnostics OK, Plugin heal validation OK, Self-heal OK
+```
+
+## The transaction
+
+The long-term goal is transactional plugin operation:
+
+> **Experiment → Validate → Commit or Rollback**
+
+This matters most exactly where AI-generated code and drivers are involved — complex environments such as VSL become isolated, recoverable components rather than risks to the core.

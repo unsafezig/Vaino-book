@@ -1,0 +1,49 @@
+---
+translation:
+  source: Chapters/16-roadmap.qmd
+  source_sha256: 8604d82287fdb937a2195dd700fa530e5b2b2122d334e04c9011e74f609a4d52
+  status: complete
+---
+
+# Tiekartta 1.0:aan ja pidemmälle
+
+## 1.0-portti
+
+Väinö 1.0 määritellään koneellisesti tarkistetulla vaatimustiedostolla (`docs/1.0.md`), jonka GitHub Actions varmistaa joka muutoksella:
+
+```text
+Väinö 1.0 requires:
+
+[ ] Kernel boots on x86_64
+[ ] Interrupt handling works
+[ ] Virtual memory works
+[ ] Processes work
+[ ] IPC works
+[ ] Capability system works
+[ ] Drivers are isolated
+[ ] Local AI can generate a driver
+[ ] Generated driver passes validation
+[ ] UART-test passed
+[ ] Hardware can be dynamically added
+[ ] At least one real robotic device works
+```
+
+Kunnes joka laatikko on todistettu:
+
+```text
+Väinö 1.0    🔴 NOT READY
+```
+
+Vaatimus on valmis vain evidenssillä — pelkkä toteutus ei ruksaa laatikkoa. Pitkän aikavälin tavoite on automatisoidut testit joka rivin takana, ei manuaaliset väitteet.
+
+## Missä projekti on
+
+Phaset 0–28 rakensivat kernelin (bootti, muisti, prosessit, syscallit, IPC, käyttäjätila, ajurit, tiedostojärjestelmä, kovennus). Phaset 29–33 rakensivat plugin-perustan (hiekkalaatikko, load/unload, IPC-gateway, tilannekuvat, jakelu, itsekorjautuvuus). Eeden-jakso (Phaset 34–37) tekee järjestelmästä kompositionaalisen: ilmoita tehtävä → koostu minimaympäristö → aja → pura; federoidu capabilityt koneiden yli; generoi rautasidokset ajonaikana; ja läpäise lopulta autonomisen elinkaaren portti (boot → koostu → aja 30 päivää → pura → vain ydin).
+
+Ks. täysi phmetaulukko tiedostoineen ja testeineen: `docs/ROADMAP_EN.md`.
+
+## 1.0 on tila, ei lupaus
+
+> **1.0 ei ole lupaus. Se on tila, joka järjestelmän on todistettava.**
+
+Lause on koko kehitysfilosofia: pieniä mitattavia kokeita, rehellisiä negatiivisia tuloksia ja portti, joka vihertyy vain koneen käskystä.

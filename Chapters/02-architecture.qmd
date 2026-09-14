@@ -1,0 +1,73 @@
+---
+description: "Hybrid microkernel, principles, and repository map"
+---
+
+# Architecture overview
+
+Zinux uses a **hybrid microkernel** model (inspired by seL4, Graphene, and Fuchsia): a small trusted core plus isolated components that communicate through capability-checked IPC.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        User space                            │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
+│  │  shell   │  │   init   │  │  drivers │  │ plugins  │    │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘    │
+│       └─────────────┴─────────────┴─────────────┘           │
+│                         │ IPC (capability syscalls)        │
+├─────────────────────────┼───────────────────────────────────┤
+│                    Kernel interface (syscall)                │
+├─────────────────────────┼───────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Microkernel core                        │    │
+│  │  • processes & threads    • memory (PMM/VMM)         │    │
+│  │  • scheduler              • IPC & capabilities       │    │
+│  │  • interrupts             • timer                    │    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ arch/x86_64  │  │   drivers/   │  │   lib/       │       │
+│  │ (GDT, IDT,   │  │ (VGA, UART,  │  │ (ring buffer,│       │
+│  │  paging,     │  │  keyboard,   │  │  bitmap,     │       │
+│  │  context sw) │  │  timer, PCI) │  │  log, fmt)   │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Design principles
+
+| Principle | Meaning |
+|-----------|---------|
+| **Almost 100% Zig** | No separate `.S` files for logic; inline `asm volatile` only where Zig cannot reach (e.g. `lgdt`, `iretq`). |
+| **Over-documentation** | Every line explains its reasoning — see `docs/DOCUMENTATION.md`. The kernel reads like a textbook. |
+| **Clarity over performance** | Working, understandable code first; optimize only after measurement. |
+| **Freestanding-first** | No `std` in the kernel; its own module tree. |
+| **Testability** | QEMU integration tests in CI; host unit tests where possible. |
+| **Multi-arch readiness** | x86_64 first; interfaces abstracted under `arch/`. |
+
+## Technology choices
+
+| Component | Choice | Why |
+|-----------|--------|-----|
+| Language | Zig 0.16+ | comptime, explicit integers, cross-compile, simple build |
+| Bootloader | Limine | UEFI/BIOS, SMP, framebuffer, higher-half ready |
+| Target | `x86_64-freestanding-none` | Widest ecosystem, QEMU support |
+| Linker | LLD via Zig, `linker.ld` | Higher-half kernel |
+| Emulator | QEMU 9.x | CI integration tests |
+| ISO | xorriso + Limine | Bootable image |
+| Reproducibility | `.zigversion` + `build.zig.zon` | Pinned toolchain |
+
+## Repository map
+
+```
+zinux/
+├── build.zig / build.zig.zon / .zigversion
+├── linker.ld / limine.conf
+├── kernel/     # main.zig, boot/, arch/x86_64/, mm/, sched/, ipc/,
+│               # drivers/, syscall/, plugin/, snapshot*.zig, fs/, net/
+├── userland/   # init, shell, lib/, *_test ELFs, vsl/, composer/
+├── libs/       # zinuxabi.zig — shared kernel/user ABI
+├── tests/      # host/ unit tests, fixtures
+├── tools/      # ISO builder, plugin verifier, generators
+└── docs/       # architecture, roadmap, specs (this book's sources)
+```
+
+The following chapters walk this map one layer at a time, always in the same order: concept, mechanism, files, lab.

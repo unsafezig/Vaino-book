@@ -1,0 +1,53 @@
+---
+description: "Driver model and the UART experiment"
+---
+
+# Drivers
+
+**Lab 4.** Every driver is a `Driver` vtable, registered at boot as a comptime list (`drivers/registry.zig`):
+
+```zig
+pub const Driver = struct {
+    name: []const u8,
+    init: fn () Error!void,
+    probe: fn () bool,
+    shutdown: fn () void,
+};
+```
+
+## Built-in drivers
+
+```
+drivers/
+├── bus/
+│   └── pci.zig          // PCI enumeration
+├── char/
+│   ├── uart.zig         // COM1 serial port (debug)
+│   └── keyboard.zig     // PS/2 keyboard (IRQ1)
+├── video/
+│   ├── vga.zig          // VGA text mode 0xB8000
+│   └── framebuffer.zig  // Limine framebuffer
+└── timer/
+    └── pit.zig          // 8254 PIT → scheduler tick
+```
+
+Interrupt handlers are minimal by rule: acknowledge, queue, return — no allocation in the ISR. The block layer (Phase 6) adds a VirtIO-block reader plus PCI common-config access.
+
+## The UART experiment
+
+UART is the first *research* driver (see `docs/UART.md`), deliberately kept small:
+
+> Send the byte 0x41 through a UART.
+
+Not a serial subsystem — a laboratory for the whole pipeline: hardware documentation → AI → Driver Plan → capabilities → generated hardware logic → validation → isolation → execution. Later stages add init, receive, interrupts, concurrency, and error handling only once the measurement questions of each stage are answered.
+
+## Lab 4 — driver markers
+
+```bash
+zig build boot-test
+# Expected serial lines (among others):
+# PCI scan OK, VirtIO block read OK
+# Keyboard init/test OK, VFS test OK, tmpfs test OK
+```
+
+Then read `kernel/drivers/char/uart.zig`: it is the reference example of over-documented hardware code — every register meaning, ordering assumption, and quirk is commented where it happens.

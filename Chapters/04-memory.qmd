@@ -1,0 +1,54 @@
+---
+description: "PMM, VMM, heap, and per-process address spaces"
+---
+
+# Memory management
+
+**Lab 2.** Allocate frames, map pages, grow the heap — then watch the boot log prove it.
+
+## Layers
+
+| Layer | Implementation | Location |
+|-------|---------------|----------|
+| **PMM** (physical) | Bitmap allocator, 4 KiB frames | `kernel/mm/pmm.zig` |
+| **VMM** (virtual) | 4-level paging (PML4→PDPT→PD→PT) | `kernel/mm/vmm.zig` |
+| **Kernel heap** | Linked-list / slab allocator | `kernel/mm/heap.zig` |
+| **User heap** | `mmap`-style syscall | `sys_mem_map` (Phase 28) |
+
+## PMM — bitmap over the Limine memory map
+
+At boot, Limine hands over the physical memory map. The PMM marks usable frames free and reserves the kernel, then allocates with a bitmap (`kernel/mm/pmm.zig`, unit-tested on host):
+
+```zig
+// Conceptual shape (see kernel/mm/pmm.zig for the documented real code)
+pub fn allocFrame() ?u64 {
+    // Find the first clear bit, set it, return frame address.
+}
+pub fn freeFrame(frame: u64) void {
+    // Clear the bit; the frame becomes reusable.
+}
+```
+
+## VMM — four levels
+
+`kernel/arch/x86_64/paging.zig` builds the page tables; `kernel/mm/vmm.zig` maps on demand (`mapPage`, `mapPageEnsure`). Page faults land in the IDT handler, which logs CR2 and the error code instead of silently dying.
+
+## Per-process address spaces
+
+Since Phase 25, each process owns a page table (`Process.page_table`, a CR3 value). The ELF loader maps a program only into its own table (`setTargetPml4` / `clearTargetPml4`), and ring-3 entry switches CR3 via the `R9 → CR3` convention in `usermode_jump.S`, restoring the kernel CR3 on return. Two processes can therefore load at the same virtual address without seeing each other — the boot test proves it:
+
+```text
+Page table per pid OK
+Address space OK
+```
+
+## Lab 2 — memory markers
+
+```bash
+zig build run
+# Expected serial lines (among others):
+# PMM initialized, PMM alloc test OK, VMM initialized, Heap initialized
+# Memory map test OK (100 frames), Heap test OK, Zinux boot OK
+```
+
+The full suite (`zig build boot-test`) additionally exercises `sys_mem_map`: create a memory capability, map one page into ring 3, write and read it back (`Mem map syscall OK`).

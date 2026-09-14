@@ -1,0 +1,51 @@
+---
+description: "Processes, threads, scheduler, and SMP"
+---
+
+# Processes and scheduling
+
+## Process and thread model
+
+```zig
+// Conceptual shape (implemented in kernel/sched/process.zig)
+Process {
+    pid: u64,
+    capabilities: CapabilitySet,
+    address_space: PageTable,
+    threads: []Thread,
+    state: enum { created, ready, running, blocked, zombie },
+}
+
+Thread {
+    tid: u64,
+    context: CpuContext,   // arch-specific register state
+    stack: VirtualRange,
+    state: ThreadState,
+}
+```
+
+Key files: `kernel/sched/process.zig` (plus `process_core.zig`, host-testable), `kernel/sched/thread.zig`, `kernel/sched/scheduler.zig`, `kernel/arch/x86_64/context.zig` (saves GPR, RIP, RSP, RFLAGS, segments), `kernel/drivers/timer/pit.zig` (8254 PIT tick → scheduler).
+
+## From stub to table
+
+- **Phase 3**: cooperative round-robin demo — two threads alternate output (`ABAB...` on serial).
+- **Phase 20**: the single stub process becomes a real process table; capability slots are per-pid (`lookupSlotForPid`).
+- **Phase 21**: `sys_spawn` launches a second user ELF in ring 3 with its own stack.
+- **Phase 23**: `sys_ps` lists real PIDs from the table; the shell `ps` command shows them.
+- **Phase 24**: lifecycle — `sys_exit` marks a zombie, `sys_wait(pid)` reaps a child.
+- **Phase 26**: timer preemption switches processes with CR3 switching on the ring-3 entry/return path.
+
+## SMP
+
+Limine's SMP info seeds per-CPU run queues (`kernel/boot/smp.zig`); the boot log prints the CPU count.
+
+## Lab — observe scheduling
+
+```bash
+zig build boot-test
+# Expected serial lines (among others):
+# Process table OK, Spawn syscall OK, Ps syscall OK
+# Process state OK, Exit syscall OK, Process wait OK
+```
+
+Then boot the shell (`zig build run -Dboot=dev`) and try `ps` — the listed PIDs come from the real table, not a stub.

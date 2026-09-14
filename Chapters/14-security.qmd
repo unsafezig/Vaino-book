@@ -1,0 +1,31 @@
+---
+description: "Threat model and hardening"
+---
+
+# Security and hardening
+
+Assume the generated driver is wrong, the AI requests too much, and the hardware documentation is misunderstood. The architecture must hold anyway.
+
+## Threat model
+
+| Threat | Countermeasure |
+|--------|---------------|
+| Buffer overflow in kernel | Bounded `@memcpy`/`@memset`, no `std`, compile-time limits |
+| User access to kernel | Page tables + ring 3, SMEP/SMAP |
+| Privilege escalation | Capability model — no global root |
+| IRQ handler bugs | Minimal handlers → scheduler queue, no allocation in ISR |
+| Over-broad plugins | Scope intersection at load, no `grant` by default |
+| Stale authority | No stored drivers (generate → bind → exec → destroy) |
+
+Phase 7 landed the hardening baseline: SMEP/SMAP activation, kernel stack canaries, KASLR (RDTSC + HHDM slide), capability-audit logging, and syscall fuzzing — each with its own boot marker (`SMEP/SMAP hardening OK`, `Stack canary OK`, `KASLR OK`, `Capability audit OK`, `Syscall fuzz OK`).
+
+## Capability discipline
+
+- Prefer `MMIO_READ(range)` over `ACCESS_DEVICE`, `IRQ(4)` over `ACCESS_INTERRUPTS`.
+- Delegation never escalates: `new ⊆ old ∩ scope`, and `grant` is denied by default scopes.
+- Revocation is global and frees ports.
+- Manifests are untrusted input; the kernel scope decides.
+
+## Robotics note
+
+A real robot is the strongest future demonstration — but safety-critical hardware must never be controlled by trusting generated code. Safety boundaries are enforced independently of AI behavior, starting with simple observable devices.

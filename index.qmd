@@ -1,0 +1,43 @@
+---
+description: "Welcome to the Väinö book"
+---
+
+# Welcome {.unnumbered}
+
+Welcome! This is the open-access book about **Väinö** — an experimental AI-native operating system written almost entirely in Zig (the kernel source lives in the `Zinux/` repository).
+
+The central idea of this book:
+
+> **Traditional operating systems stock drivers. Väinö builds the capability it needs.**
+
+And the rule that governs everything:
+
+> **The AI proposes. The kernel decides.**
+
+## About this book {.unnumbered}
+
+This book describes the Väinö/Zinux operating system: its architecture, its capability model, its plugin system, its Linux-compatibility layer (VSL), and the practical steps to build, boot, and experiment with it — in QEMU and on real hardware.
+
+Each part pairs explanation with a **lab**: you build the kernel with `zig build`, boot it in QEMU, and observe the expected serial output (for example `Zinux boot OK`).
+
+## A note on names {.unnumbered}
+
+- **Väinö** is the name of the operating system and its architectural vision.
+- **Zinux** is the technical/kernel repository name (Zig + Unix-inspired). In practice the two names refer to the same system: this book uses *Väinö* for the vision and *Zinux* when pointing at concrete source files (`kernel/`, `userland/`, `libs/zinuxabi.zig`).
+
+## How to read this book {.unnumbered}
+
+- Chapters 1–2 explain the *why*: the AI-native driver model and the research hypothesis.
+- Chapters 3–9 explain the *what*: boot, memory, processes, IPC, syscalls, drivers, userland.
+- Chapters 10–13 explain the *difference*: plugins, snapshots, VSL, and AI-generated hardware logic.
+- Chapters 14–17 cover security, testing, the roadmap to 1.0, and real hardware.
+
+Code blocks show the file they come from (for example `kernel/mm/pmm.zig`). Paths and identifiers are never translated — only prose is.
+
+## License {.unnumbered}
+
+Copyright © 2026 Mikko Huuskonen. This book is licensed under the [CC-BY 4.0 Creative Commons Attribution 4.0 International Public License](https://creativecommons.org/licenses/by/4.0/).
+
+![](Figures/creative-commoms-88x31.png){width=88px}
+
+The Quarto book structure is adapted from Pedro Duarte Faria's [Introduction to Zig](https://github.com/pedropark99/zig-book) (CC-BY 4.0). The operating system itself is a separate project under GPL-3.0-or-later.

@@ -1,0 +1,70 @@
+---
+translation:
+  source: Chapters/10-plugins.qmd
+  source_sha256: f4bb8762ce438b88a18989b0bf82565ac776023949490a4ab81fc9063f29e957
+  status: complete
+---
+
+# Plugin-arkkitehtuuri
+
+**Labra 5.** Ydinperiaate:
+
+> **Kaikki on plugin.**
+
+Plugin on vaihdettava käyttäjätilan prosessi, joka laajentaa Zinuxia muuttamatta luotettua ydintä — rautatuki, tiedostojärjestelmät, verkko tai yhteensopivuuskerrokset. Ydin pysyy pienenä (muisti, prosessit, IPC, capabilityt, tietoturva, elinkaari); kaikki muu on komponentteja.
+
+```
+                 Zinux
+                   │
+            ┌──────▼──────┐
+            │ Zinux Core  │
+            └──────┬──────┘
+                   │
+             Plugin Interface
+                   │
+            ┌──────▼──────┐
+            │   plugin    │
+            └──────┬──────┘
+                   │
+            hardware/service
+```
+
+## Capability-sidotut pluginit
+
+Plugin ilmoittaa tarvitsemansa; ydin myöntää vain hyväksytyn osajoukon:
+
+```text
+Plugin: camera
+Requested: device.camera, dma, interrupts
+Not granted: filesystem.write, network, microphone, arbitrary_memory
+```
+
+Sama sääntö kuin ajureilla: vähin valta, aina.
+
+## Elinkaari ja manifesti
+
+```
+discover → validate → load → grant capabilities → start →
+running → stop → unload
+```
+
+Jokainen plugin tuo manifestin (`userland/plugin_manifest.zig`): nimi, versio, ABI-versio, vaaditut capabilityt, tarjoamat palvelut, riippuvuudet, arkkitehtuuri, eheystieto. Manifesti on *pyyntö* — kerneli leikkaa `manifest ∩ scope` latauksessa ja hylkää tuntemattomat tyypit ja varatut oikeusbitit.
+
+Täytäntöönpanon osat: `kernel/plugin/scope.zig` (`Scope{pid, allowed_types, allowed_rights, max_caps}`), `kernel/plugin/loader.zig` (8-paikkainen rekisteri), `sys_plugin_load=24` / `sys_plugin_unload=25` sekä pluginien välinen gateway `sys_plugin_transfer=26` init-pid-scopeen juurruttuna (`kernel/plugin/ns_map.zig`).
+
+## Eristysinvariantit (I1–I7)
+
+Jokaisella pluginilla on oma pid ja slotit (ei ambienttia valtaa), oma osoiteavaruus, scope-osajoukko-omistukset, ei-eskaloiva delegointi, manifesti-pyyntönä, globaali revokointi eikä hiljaista laajentamista. Ks. `docs/PLUGIN_MODEL.md`.
+
+## Jakelu
+
+Phase 32 toi epäluotetun jakelun tarinan: Ed25519-allekirjoitusspesifikaatio (`docs/PLUGIN_SIGNING.md`), minimaalinen rekisteriformaatti (`userland/plugin_registry/`), yhteisön auditointiohje (`docs/PLUGIN_AUDIT.md`) sekä `zig build plugin-install` verify-then-copy-semantiikalla (peukaloidut paketit hylätään, mitään ei asenneta).
+
+## Labra 5 — plugin-merkit
+
+```bash
+zig build boot-test
+# Odotettuja sarjarivejä (muiden joukossa):
+# plg / Plugin load OK, Plugin unload OK
+# Plugin manifest caps OK, Plugin IPC gateway OK
+```

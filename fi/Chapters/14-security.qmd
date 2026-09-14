@@ -1,0 +1,34 @@
+---
+translation:
+  source: Chapters/14-security.qmd
+  source_sha256: 0ca5defb4cecdb3c629c5555f4f04c29c5e896151070a9ee57840a0236bef4e4
+  status: complete
+---
+
+# Tietoturva ja kovennus
+
+Oleta generoidun ajurin olevan väärässä, tekoälyn pyytävän liikaa ja rautadokumentaation tulleen väärinymmärretyksi. Arkkitehtuurin on kestettävä silti.
+
+## Uhkamalli
+
+| Uhka | Vastatoimi |
+|------|------------|
+| Puskurin ylivuoto kernelissä | Rajattu `@memcpy`/`@memset`, ei `std`:tä, käännösaikaiset rajat |
+| Käyttäjän pääsy kerneliin | Sivutaulut + ring 3, SMEP/SMAP |
+| Oikeuksien eskalointi | Capability-malli — ei globaalia rootia |
+| IRQ-käsittelijäbugit | Minimaaliset käsittelijät → scheduler-jono, ei allokointia ISR:ssä |
+| Liian laajat pluginit | Scope-leikkaus latauksessa, ei `grant`:ia oletuksena |
+| Vanhentunut valta | Ei varastoituja ajureita (generate → bind → exec → destroy) |
+
+Phase 7 toi kovennetun perustan: SMEP/SMAP-aktivointi, kernelin pinokanarialinnut, KASLR (RDTSC + HHDM-slide), capability-audit-lokitus ja syscall-fuzzing — jokaisella oma boottimerkki (`SMEP/SMAP hardening OK`, `Stack canary OK`, `KASLR OK`, `Capability audit OK`, `Syscall fuzz OK`).
+
+## Capability-kuri
+
+- Suosi `MMIO_READ(range)`:a `ACCESS_DEVICE`:n sijaan, `IRQ(4)`:ää `ACCESS_INTERRUPTS`:n sijaan.
+- Delegointi ei koskaan eskaloi: `new ⊆ old ∩ scope`, ja `grant` on oletusscopeissa kielletty.
+- Revokointi on globaali ja vapauttaa portit.
+- Manifestit ovat epäluotettua syötettä; kernelin scope päättää.
+
+## Robotiikkahuomio
+
+Oikea robotti on vahvin tuleva demonstraatio — mutta turvallisuuskriittistä rautaa ei saa koskaan ohjata luottamalla generoituun koodiin. Turvarajat pannaan täytäntöön tekoälyn käytöksestä riippumatta, aloittaen yksinkertaisista havaittavista laitteista.

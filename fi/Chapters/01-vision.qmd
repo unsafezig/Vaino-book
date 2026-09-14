@@ -1,0 +1,98 @@
+---
+translation:
+  source: Chapters/01-vision.qmd
+  source_sha256: 8e1530b40df37a808991fcee8d11f89ebf72f7ac4190651e0a72a2b71dd98f1e
+  status: complete
+---
+
+# Tekoälynatiivi ajurimalli
+
+Perinteiset käyttöjärjestelmät keräävät ajureita vuosikymmeniä. Ajuri on pysyvä ohjelmistokomponentti, joka on suunniteltava, toteutettava, testattava ja toimitettava *ennen kuin* käyttöjärjestelmä voi käyttää laitetta.
+
+Väinö kysyy toisin:
+
+> Entä jos ajurin tarvitsee olla olemassa vain silloin, kun tehtävä sitä vaatii?
+
+## Ehdota vs päätä
+
+Väinö-ajuri ei välttämättä ole pysyvä osa käyttöjärjestelmää. Se voi olla pieni, tehtäväkohtainen toteutus, jonka paikallinen tekoäly generoi ja jota kerneli rajoittaa:
+
+```
+Hardware
+    │
+    ▼
+Hardware description
+    │
+    ▼
+Local AI
+    │
+    ▼
+Task / Driver Plan
+    │
+    ▼
+Kernel Policy
+    │
+    ├── allowed resources
+    ├── allowed operations
+    └── forbidden operations
+    │
+    ▼
+Generated Driver
+    │
+    ▼
+Validation
+    │
+    ▼
+Sandbox / Capability boundary
+    │
+    ▼
+Hardware
+```
+
+Tekoäly ei saa rajoittamatonta pääsyä. Se laatii ensin **suunnitelman**, joka kuvaa pienimmän resurssijoukon tehtävään:
+
+```text
+Task:
+    Read a temperature sensor.
+
+Required:
+    MMIO read: 0x4004
+    Timer: 10 ms
+
+Not required:
+    DMA
+    Network
+    Filesystem
+    Other devices
+    Kernel memory
+    MMIO writes
+```
+
+Kerneli päättää, mitkä capabilityt myönnetään. **Tekoäly saa pyytää capabilitya, mutta ei myöntää sitä itselleen.**
+
+## Ei varastoituja ajureita
+
+Pitkän aikavälin sääntö (ks. Zinuxin `docs/NO_DRIVERS.md`):
+
+> Älä varastoi sitä, mikä voidaan turvallisesti rakentaa tarvittaessa.
+
+Sidottu ajuri on olemassa vain välillä `generate → bind → exec → destroy`. Tuhoamisen jälkeen ajurista ei jää tavuakaan: ei `.ko`-tiedostoa, ei rekisteripaikkaa, ei välimuistia. Rautakäytön toistaminen tarkoittaa uudelleengenerointia — joka validoi *tämän päivän* politiikkaa vasten, joten vanhentunut valta ei voi elää arviotaan pidempään.
+
+## Jättiläisten harteilla
+
+Väinö ei väitä ajurisynteesin olevan uutta. Termite-projekti osoitti ajurisynteesin formaaleista spesifikaatioista, ja Termite-2 tutki käyttäjäohjattua synteesiä. Väinö jatkaa tätä tutkimuslinjaa tämän päivän työkaluilla: paikallinen tekoäly muuttaa tavallisen rautadokumentaation ja tehtävän rajoitetuksi ajurisuunnitelmaksi, kun kerneli säilyy auktoriteettina.
+
+Eikä Väinö heitä pois 35 vuoden Linux-rautajatkumoa: VSL-plugin (luku 12) säilyttää sen vaihdettavana komponenttina.
+
+> **35 vuoden insinöörityö ei ole korvattavaa. Sen päällä seistään.**
+
+## Mitä opit
+
+Kirjan lopussa osaat:
+
+- selittää Plan / Policy / Implementation -jaon,
+- rakentaa ja bootata kernelin QEMU:ssa ja oikealla raudalla,
+- seurata syscallin ring 3:sta capability-tarkistuksen läpi,
+- ladata pluginin, ottaa tilannekuvan ja vaihtaa sen lennossa,
+- ajaa Linux-binäärin VSL-yhteensopivuuskerroksen läpi,
+- ja kuvata, mitä "Väinö 1.0:n" on *todistettava* — ei luvattava.

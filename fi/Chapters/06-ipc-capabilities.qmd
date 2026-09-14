@@ -1,0 +1,53 @@
+---
+translation:
+  source: Chapters/06-ipc-capabilities.qmd
+  source_sha256: 578c7d1f5c1e097dd5839a115b516b5c01292ec818ee809e0efdf9b85cf9870f
+  status: complete
+---
+
+# IPC ja capabilityt
+
+**Labra 3.** Zinuxissa ei ole Unix-root/setuid-mallia. Valta kulkee **capabilityissä**: pienissä, eksplisiittisissä, prosessikohtaisissa kahvoissa.
+
+```
+Process A                    Kernel                     Process B
+    │                           │                            │
+    │── cap_create(port) ────────►│                            │
+    │◄── capability handle ───────│                            │
+    │                           │                            │
+    │── cap_send(port, msg) ────►│── deliver ────────────────►│
+    │                           │                            │
+```
+
+## Capability-syscallit
+
+| Syscall | Tarkoitus |
+|---------|-----------|
+| `sys_cap_create` | Luo capability-objektin (portti, muisti, irq) |
+| `sys_cap_delegate` | Anna osa oikeuksista toiselle prosessille |
+| `sys_cap_transfer` | Siirrä/kopioi slotti prosessien välillä (gateway-tarkistettu) |
+| `sys_cap_revoke` | Globaali revokointi — joka viittaava slotti kuolee, portit vapautuvat |
+| `sys_cap_get_rights/type/resource` | Slotin introspektio (oikeusmaski, tyyppi, resurssi-id) |
+| `sys_ipc_send/recv/try_recv` | Blokkaava lähetys, blokkaava vastaanotto, blokkaamaton (`EAGAIN` jos tyhjä) |
+| `sys_ipc_pending/flush/queue_capacity` | Jonon syvyys, tyhjennys ilman vastaanottoa, maksimisyvyys |
+| `sys_mem_map` | Sivun mappaus muisti-capabilityn kautta |
+
+Ydintiedostot: `kernel/ipc/capability.zig` (+ `capability_core.zig`), `kernel/ipc/port.zig` (+ `port_core.zig`), syscall-liima `kernel/syscall/dispatch.zig`:ssä, jaetut numerot `libs/zinuxabi.zig`:ssä, user-kääreet `userland/lib/ipc.zig`:ssä ja `userland/lib/cap.zig`:ssä.
+
+## Pieniä ja eksplisiittisiä
+
+Capabilityjen tulee olla mahdollisimman kapeita — `MMIO_READ(range)`, ei `ACCESS_DEVICE`; `IRQ(4)`, ei `ACCESS_INTERRUPTS`. Vain varhaisen kehityksen yksinkertaistamiseksi luodut laajat oikeudet on dokumentoitava väliaikaisiksi.
+
+Kaksi korjattua tietoturvalöydöstä muovasi mallia: `sys_cap_create` asentaa *kutsujan* pidiin (ei pid 1:een), ja `sys_cap_transfer` deduplikoi uhrin rajattuihin 32 slottiin kopioilla täyttämisen sijaan.
+
+## Labra 3 — IPC-merkit
+
+```bash
+zig build boot-test
+# Odotettuja sarjarivejä (muiden joukossa):
+# IPC syscall OK, Cap syscall OK, Cap create syscall OK
+# Cap transfer OK, Cross-process send OK
+# Userland cross spawn IPC test OK
+```
+
+Jokainen `userland/`-alla oleva `*_test/`-hakemisto on pieni ring-3-ELF, joka harjoittaa täsmälleen yhtä polkua — lue yksi ennen kuin keksit uuden mekanismin.

@@ -1,0 +1,48 @@
+---
+translation:
+  source: Chapters/13-ai-generation.qmd
+  source_sha256: ddb2748e2f30a5981d604819f0583abc07fb51874d2bf1231e6a0698e20143ac
+  status: complete
+---
+
+# Tekoälygeneroitu rautalogiikka
+
+Tämä luku tekee tutkimusmetodin eksplisiittiseksi. Kaikki seuraa `docs/AGENTS.md`:ää: suosi toteutusta, joka tekee hypoteesista helpommin testattavan, mitattavan ja kumottavan.
+
+## Putki
+
+```
+plan → request capabilities → kernel approval → generate code →
+compile → validate → sandbox → run
+```
+
+Kolme käsitettä pysyy erillään: **Plan** (mitä tekoäly uskoo tarvitsevansa), **Policy** (mitä kerneli sallii), **Implementation** (pienin hyväksytyn suunnitelman täyttävä ajuri). Generoitua koodia ei luoteta siksi että se on generoitua — se läpäisee samat validoinnit ja capability-rajoitukset kuin mikä tahansa epäluotettu koodi, eikä tekoäly saa muokata omia validointisääntöjään.
+
+## Driver Planit ensiluokkaisina objekteina
+
+Suunnitelmien tulee olla eksplisiittisiä ja koneluettavia: tehtävä, vaaditut resurssit, pyydetyt capabilityt, rautaoperaatiot, oletukset, tunnettu/tuntematon tila, kielletyt operaatiot, odotettu käytös, vikaantumisehdot. Suunnitelma on *pyyntö*, ei lupa — ja hylkäysten tulee opettaa:
+
+```text
+Driver rejected:
+MMIO write at 0x3F9 is outside granted range 0x3F8.
+```
+
+jotta tekoäly voi korjata ilman politiikan kiertoa.
+
+## Generoinnin sijaan framework
+
+Älä pyydä tekoälyä regeneroimaan sitä, minkä Zinux tarjoaa deterministisesti: rekisteröinti, elinkaari, capability-asetukset, IPC, allokointi, virheenkäsittely, hiekkalaatikko, discovery, yhteiset rajapinnat. Tekoäly keskittyy rautaspesifiin logiikkaan; boilerplate kuuluu frameworkille. Jos boilerplate-lisäys ei opeta mitään tekoälygeneroidusta rautalogiikasta, se ei kuulu generoituun koodiin.
+
+## Spesifikaatiotaakan mittaaminen
+
+Tärkein metriikka voi olla:
+
+> Kuinka paljon ihmisen spesifikaatiota tarvitaan toimivan, rajoitetun rautarajapinnan tuottamiseen?
+
+Mittaa missä käytännöllistä: syötteen koko, generoidun vs rautaspesifin vs boilerplate-koodin koko, pyydetyt/myönnetyt/hylätyt capabilityt, generoinnin onnistumisaste, validointi- ja ajonaikaiset vikaantumisasteet, hylkäyksestä toipuminen, ajo-overhead. Kirjaa joka kokeesta malli, versio, promptti, dokumentaatio, suunnitelma, generoitu lähde ja tulokset — ja commitoi kiinnostavat epäonnistumiset. Epäonnistunut koe rehellisine mittauksineen voittaa lavastetun onnistumisen.
+
+## Rehellisyyssäännöt
+
+- Älä koskaan väitä tekoälygeneroinniksi käsinkirjoitettua koodia; merkitse generoitu, korjattu, osittainen tai käsinkirjoitettu rehellisesti.
+- Testaa virheellistä käytöstä tarkoituksella: alueen ulkopuolinen MMIO, evätyt capabilityt, väärät rekisterisekvenssit, timeoutit, kilpailut, malformed-suunnitelmat.
+- Etene vale-laite → QEMU → oikea rauta, ja lisää vain ominaisuuksia, jotka palvelevat kerneliä, ajurimallia, hypoteesia tai olemassa olevaa koetta.

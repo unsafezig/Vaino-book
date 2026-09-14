@@ -1,0 +1,46 @@
+---
+translation:
+  source: Chapters/09-userland-fs.qmd
+  source_sha256: a489adc0df62bcbee1b6f392a2fbf0b9eb1d72fea660001157ae303b0806f31f
+  status: complete
+---
+
+# Käyttäjätila ja tiedostojärjestelmä
+
+## Init, shell, komennot
+
+Phase 5 herätti käyttäjätilan henkiin:
+
+| Osa | Tiedosto | Boottimerkki |
+|-----|----------|--------------|
+| ELF-lataaja | `kernel/loader/elf.zig` (parsii `PT_LOAD`) | `elf` |
+| init | `userland/init/main.zig` | `Init process OK` |
+| shell | `userland/shell/main.zig` (kehote, `help`) | `Shell test OK` |
+| näppäimistö | `kernel/drivers/char/keyboard.zig` | `Keyboard init/test OK` |
+| komennot | `userland/shell/commands/` (`help`, `meminfo`, `ps`) | `SYS_meminfo` / `sys_ps` kautta |
+
+Bootti pudottaa `zinux>`-kehotteeseen, jossa `help`, `meminfo` ja `ps` toimivat. `ps` listaa oikeat PID:t prosessitaulusta (Phase 23).
+
+## Tiedostojärjestelmä
+
+Phase 6 lisäsi minimipinon:
+
+- **PCI-skannaus** (`kernel/drivers/bus/pci.zig`) löytää laitteet, mukaan lukien VirtIO-blockin.
+- **VirtIO-blk** (`kernel/drivers/block/virtio_blk.zig`) lukee sektoreita.
+- **VFS** (`kernel/fs/vfs.zig`) tarjoaa `mount/open/read/close`.
+- **tmpfs** (`kernel/fs/tmpfs.zig`) on RAM-pohjainen (testissä `/tmp/welcome`).
+- **Userland-ajurimalli** (`userland/drivers/` + rekisteri) todistaa ajurien elävän kernelin ulkopuolella.
+
+Rehelliset rajat (ks. myös luku 17): block-ajuri on QEMU-virtio-only, eikä tmpfs säily boottien yli — eMMC/SATA-ajuria ei vielä ole.
+
+## Labra — shell-kierros
+
+```bash
+zig build run -Dboot=dev
+```
+
+```text
+zinux> help
+zinux> meminfo
+zinux> ps
+```

@@ -1,0 +1,54 @@
+---
+translation:
+  source: Chapters/05-processes.qmd
+  source_sha256: 71b1c5e43388eb14373957c9ae5363db913df16e1ccc9a5d1d08eb3d7d888873
+  status: complete
+---
+
+# Prosessit ja aikataulutus
+
+## Prosessi- ja säiemalli
+
+```zig
+// Konseptuaalinen rakenne (toteutus: kernel/sched/process.zig)
+Process {
+    pid: u64,
+    capabilities: CapabilitySet,
+    address_space: PageTable,
+    threads: []Thread,
+    state: enum { created, ready, running, blocked, zombie },
+}
+
+Thread {
+    tid: u64,
+    context: CpuContext,   // arkkitehtuurikohtainen rekisteritila
+    stack: VirtualRange,
+    state: ThreadState,
+}
+```
+
+Keskeiset tiedostot: `kernel/sched/process.zig` (sekä host-testattava `process_core.zig`), `kernel/sched/thread.zig`, `kernel/sched/scheduler.zig`, `kernel/arch/x86_64/context.zig` (tallentaa GPR, RIP, RSP, RFLAGS, segmentit), `kernel/drivers/timer/pit.zig` (8254-PIT-tick → scheduler).
+
+## Stubista taulukkoon
+
+- **Phase 3**: kooperatiivinen round-robin-demo — kaksi säiettä vuorottelee (`ABAB...` sarjassa).
+- **Phase 20**: yhdestä stub-prosessista tulee oikea prosessitaulu; capability-slotit ovat pid-kohtaisia (`lookupSlotForPid`).
+- **Phase 21**: `sys_spawn` käynnistää toisen user-ELFin ring 3:ssa omalla pinollaan.
+- **Phase 23**: `sys_ps` listaa oikeat PID:t taulusta; shellin `ps` näyttää ne.
+- **Phase 24**: elinkaari — `sys_exit` merkitsee zombien, `sys_wait(pid)` korjaa lapsen.
+- **Phase 26**: ajastinpreemptio vaihtaa prosesseja CR3-vaihdolla ring-3-sisään/ulosmenossa.
+
+## SMP
+
+Liminen SMP-info siementää CPU-kohtaiset ajojonot (`kernel/boot/smp.zig`); boottiloki tulostaa CPU-määrän.
+
+## Labra — tarkkaile aikataulutusta
+
+```bash
+zig build boot-test
+# Odotettuja sarjarivejä (muiden joukossa):
+# Process table OK, Spawn syscall OK, Ps syscall OK
+# Process state OK, Exit syscall OK, Process wait OK
+```
+
+Boottaa sitten shell (`zig build run -Dboot=dev`) ja kokeile `ps` — listatut PID:t tulevat oikeasta taulusta, eivät stubista.

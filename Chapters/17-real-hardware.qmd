@@ -1,0 +1,40 @@
+---
+description: "Booting Väinö on a real laptop"
+---
+
+# Real hardware guide
+
+**Lab 7.** QEMU is the laboratory; an old laptop is the proof. This chapter condenses `docs/REAL_HARDWARE.md`: a staged plan for booting Väinö on an HP Stream from a USB stick.
+
+## What is (and is not) promised
+
+| Item | Status | Reason |
+|------|--------|--------|
+| Boot from USB, kernel, memory, syscalls, plugins, shell, VSL | Works | No QEMU dependencies in the core |
+| Network / HTTP server | Not yet | No NIC driver; loopback only |
+| Disk persistence | Not yet | `virtio-blk` is QEMU-only; no eMMC driver — tmpfs (RAM) only |
+| Serial log on the laptop | Not available | No COM port — VGA screen is the only console |
+
+A side effect worth knowing: with no eMMC/SATA driver, the kernel *cannot* touch the laptop's internal drive. Removing the USB stick returns the machine to normal — nothing is ever installed.
+
+## Stage 0 — know your hardware
+
+On Windows: `Win + R` → `msinfo32`, and record model, CPU, BIOS mode (UEFI/Legacy), Secure Boot state, and RAM. All Stream models are 64-bit x86_64, which is what the kernel targets. UEFI 64-bit machines boot the ISO directly; 2014–2016 Atom models with 32-bit UEFI need the bundled `BOOTIA32.EFI` path via Limine.
+
+Before touching hardware, capture the QEMU reference log (`zig build boot-test`) — that is what *should* appear.
+
+## Stage 1 — the USB stick
+
+Write the ISO from `zig build iso` to the stick, disable Secure Boot if needed, and boot the stick. Expected VGA markers mirror the serial markers from Chapter 3 (`Zinux boot OK` and phase lines).
+
+## Troubleshooting matrix
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| Boot menu never appears | 32-bit UEFI / Secure Boot | Use `BOOTIA32.EFI` path; disable Secure Boot |
+| Black screen, but USB activity | UEFI-GOP mode: kernel writes text to `0xB8000`, which GOP may not show | Known limitation — the boot may still have succeeded; try Legacy/CSM mode |
+| Hang after early markers | Real-hardware quirk (timer/IRQ routing) | Compare against the QEMU reference log; report the last visible marker |
+
+## Honest limits
+
+No network and no disk yet — the *why* and the path forward (a Realtek NIC as a natural driver-generation target) are documented alongside, not hidden. The laptop that boots Väinö, runs plugins including VSL, and serves local demos from its keyboard is already a complete proof of the architecture.

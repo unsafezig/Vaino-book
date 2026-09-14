@@ -1,0 +1,95 @@
+---
+description: "Build the kernel and boot it in QEMU"
+---
+
+# Boot and build
+
+**Lab 1.** In this chapter you build the kernel, create a bootable ISO, and boot it in QEMU.
+
+## Prerequisites
+
+- Zig 0.16.0 (see `.zigversion` in Zinux)
+- `xorriso`, `curl`, `cc` for the `iso` step
+- `qemu-system-x86_64` for the `run` step
+
+## The build steps
+
+`build.zig` handles everything — no external scripts:
+
+| Step | Command | Result |
+|------|---------|--------|
+| Compile | `zig build` | `zig-out/bin/zinux-kernel` (ELF) |
+| ISO | `zig build iso` | Bootable ISO with Limine |
+| Smoke boot | `zig build run` | QEMU boot, stops at `Smoke boot OK` (~10 s) |
+| Full tests | `zig build boot-test` | QEMU integration suite, stops at `Full boot OK` |
+| Dev mode | `zig build run -Dboot=dev` | Interactive scheduler, does not exit |
+| Host tests | `zig build test` | Unit tests on the host Zig |
+
+```bash
+zig build
+zig build iso
+zig build run
+# Expected serial output:
+# [Zinux] boot OK
+```
+
+## What happens at boot
+
+1. **Limine** loads the kernel ELF into the higher half and hands over a request/response structure (`kernel/boot/limine.zig`, `kernel/boot/entry.zig`).
+2. **`_start`** sets up an early stack and calls `kmain` (`kernel/main.zig`).
+3. Early drivers initialize: VGA text mode (`kernel/drivers/video/vga.zig`) and UART COM1 (`kernel/drivers/char/uart.zig`).
+4. The log module (`kernel/lib/log.zig`) prints to both serial and VGA.
+5. Memory, scheduler, syscalls, and boot tests initialize in order — each prints its marker to the serial log, which is how the CI asserts success.
+
+## Higher-half kernel
+
+The kernel is linked at `0xFFFFFFFF80000000` (see `linker.ld`):
+
+```
+Virtual address space (x86_64):
+
+0xFFFF_FFFF_FFFF_FFFF ┐
+                      │  Kernel higher-half (-2 GiB)
+0xFFFF_FFFF_8000_0000 ┤  kernel .text, .data, .bss
+                      │
+0xFFFF_8000_0000_0000 ┤  Direct map of physical RAM (-128 GiB)
+                      │
+0x0000_0000_0000_0000 ┴  User space
+```
+
+Limine provides the HHDM (higher-half direct map) offset; the identity mapping is removed after boot for security.
+
+## Freestanding configuration
+
+```zig
+const kernel_exe = b.addExecutable(.{
+    .name = "zinux-kernel",
+    .root_source_file = b.path("kernel/main.zig"),
+    .target = b.resolveTargetQuery(.{
+        .cpu_arch = .x86_64,
+        .os_tag = .freestanding,
+        .abi = .none,
+    }),
+    .optimize = optimize,
+});
+kernel_exe.setLinkerScript(b.path("linker.ld"));
+kernel_exe.root_module.red_zone = false;
+kernel_exe.root_module.stack_protector = false;
+```
+
+Only `linker.ld`, `limine.conf`, and CI YAML live outside Zig — and the linker script is documented line by line.
+
+## Lab 1 — boot it
+
+```bash
+cd Zinux
+zig build iso && zig build run
+```
+
+Success looks like this on the serial console:
+
+```text
+[Zinux] boot OK
+```
+
+If QEMU is missing, `zig build` (compile) and `zig build test` (host tests) still verify your toolchain. Chapter 17 repeats this procedure on real hardware with a USB stick.

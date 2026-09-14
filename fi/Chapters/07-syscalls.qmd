@@ -1,0 +1,33 @@
+---
+translation:
+  source: Chapters/07-syscalls.qmd
+  source_sha256: b13221619bf68f7b8cc1e973b6cf130117aa26b4ca1d1f4034bf2e11539607db
+  status: complete
+---
+
+# Syscallit ja ABI
+
+## Mekanismi
+
+x86_64:llä käyttäjätila ansoo `syscall`/`sysenter`-käskyillä (`kernel/arch/x86_64/syscall.zig`, sisäänmenstub `kernel/arch/x86_64/syscall_entry.S`:ssä). Argumentit kulkevat System V AMD64 ABI:ssa (RDI, RSI, RDX, R10, R8, R9); RAX kantaa tuloksen tai negatiivisen errnon. Gateway-plugin-siirto käyttää neljännelle argumentilleen R10:tä, koska CPU ylikirjoittaa RCX:n.
+
+Numerot ovat `Syscall`-enum — ei koskaan taikaliteraaleja. Jaettu sopimus on `libs/zinuxabi.zig`:ssä (kernelin ja käyttäjätilan yhteinen), mukaan lukien virhekoodit `EINVAL`, `EPERM`, `ESRCH`, `ENOMEM` ja `EAGAIN`.
+
+## Dispatch
+
+`kernel/syscall/dispatch.zig` reitittää numeron pieneen käsittelijätiedostoon (`*_syscall.zig`, host-testattava logiikka `*_core.zig`:ssä). Käsittelijät validoivat kutsujan capability-slotin *ennen* kuin koskevat objektiin, kaventavat rekisteriarvot katkaisulla (fail closed) ja palauttavat tarkat virheet, jotta hylätyt kutsujat saavat hyödyllisiä vastaesimerkkejä:
+
+```text
+Driver rejected:
+MMIO write at 0x3F9 is outside granted range 0x3F8.
+```
+
+eikä vain `Driver rejected.`
+
+## Ring-3-siirtymä
+
+`kernel/arch/x86_64/usermode.zig` (+ `usermode_entry.S`, `usermode_jump.S`) laskeutuu ring 3:een `iretq`:lla ja palaa syscall-polun kautta. Phase 4:n merkkipaalu oli ring-3 `sys_write("hello")` sarjassa, perässä `Usermode test OK`.
+
+## Fuzzing
+
+Phase 7 toi syscall-fuzzerin (`kernel/syscall/syscall_fuzz_core.zig`), joka heittää näennäissatunnaisia (LCG) argumentteja rajapintaan; boottiloki päättää osion `Syscall fuzz OK`:hon.

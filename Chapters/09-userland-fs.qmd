@@ -1,0 +1,43 @@
+---
+description: "Init, shell, and the minimal filesystem"
+---
+
+# Userland and filesystem
+
+## Init, shell, commands
+
+Phase 5 brought user space to life:
+
+| Piece | File | Boot marker |
+|-------|------|-------------|
+| ELF loader | `kernel/loader/elf.zig` (parses `PT_LOAD`) | `elf` |
+| init | `userland/init/main.zig` | `Init process OK` |
+| shell | `userland/shell/main.zig` (prompt, `help`) | `Shell test OK` |
+| keyboard | `kernel/drivers/char/keyboard.zig` | `Keyboard init/test OK` |
+| commands | `userland/shell/commands/` (`help`, `meminfo`, `ps`) | via `SYS_meminfo` / `sys_ps` |
+
+Boot drops you at a `zinux>` prompt where `help`, `meminfo`, and `ps` work. `ps` lists real PIDs from the process table (Phase 23).
+
+## Filesystem
+
+Phase 6 added a minimal stack:
+
+- **PCI scan** (`kernel/drivers/bus/pci.zig`) finds devices, including VirtIO-block.
+- **VirtIO-blk** (`kernel/drivers/block/virtio_blk.zig`) reads sectors.
+- **VFS** (`kernel/fs/vfs.zig`) offers `mount/open/read/close`.
+- **tmpfs** (`kernel/fs/tmpfs.zig`) is RAM-backed (`/tmp/welcome` in the test).
+- **Userland driver model** (`userland/drivers/` + registry) proves drivers can live outside the kernel.
+
+Honest limits (see also Chapter 17): the block driver is QEMU-virtio only, and tmpfs does not persist across boots — there is no eMMC/SATA driver yet.
+
+## Lab — shell tour
+
+```bash
+zig build run -Dboot=dev
+```
+
+```text
+zinux> help
+zinux> meminfo
+zinux> ps
+```

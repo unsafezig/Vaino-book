@@ -1,0 +1,36 @@
+---
+translation:
+  source: Chapters/references.qmd
+  source_sha256: bb30c05c22cb87e264fecf02ef4eba0bcd6f3fc7096e996a34e2941f423565ed
+  status: complete
+---
+
+# Lähteet {.unnumbered}
+
+## Kirjan lähteet (Zinux-repositorio, `docs/`)
+
+- `README.md` — tekoälynatiivi ajurimalli, tilannekuvat, VSL-yleiskuva, 1.0-portti
+- `ARCHITECTURE.md` — hybridimikrokerneli, muistimalli, IPC, ajurit, käännös
+- `DOCUMENTATION.md` — ylidokumentointistandardi
+- `ROADMAP_EN.md` — Phaset 0–37 tiedostoineen ja testeineen
+- `1.0.md` — koneellisesti tarkistetut 1.0-vaatimukset
+- `AGENTS.md` — tutkimusperiaatteet (kirjan metodin tausta)
+- `PLUGIN_MODEL.md`, `PLUGIN_SIGNING.md`, `PLUGIN_AUDIT.md`
+- `VSL_SPEC.md` — Väinö Subsystem for Linux
+- `UART.md` — UART-ajurikoe (860-rivinen tutkimusspeci)
+- `HW_CAP_PROTOCOL.md`, `NO_DRIVERS.md`, `SELF_HEAL.md`, `FEDERATION.md`, `EEDEN.md`
+- `REAL_HARDWARE.md` — HP Stream USB-boottausohje
+
+## Aiempi työ ja inspiraatio
+
+- Ryzhyk et al., *User-Guided Device Driver Synthesis*, OSDI 2014 (Termite / Termite-2)
+- seL4-mikrokerneli — capability-malli
+- Limine-boot-protokolla — <https://github.com/limine-bootloader/limine>
+- OSDev Wiki — <https://wiki.osdev.org/>
+- Zig Language Reference — <https://ziglang.org/documentation/master/>
+- Graphene Kernel — Zig-hybridimikrokernel-koe
+
+## Kirjan infrastruktuuri
+
+- Quarto-julkaisujärjestelmä — <https://quarto.org/>
+- Rakenne mukailtu Pedro Duarte Farian kirjasta *Introduction to Zig: a project-based book* ([zig-book](https://github.com/pedropark99/zig-book), CC-BY 4.0; suomalainen forkki [zig-book-FI](https://mikko-huuskonen-pro.github.io/zig-book-FI/))

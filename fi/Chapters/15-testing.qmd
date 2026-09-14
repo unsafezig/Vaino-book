@@ -1,0 +1,45 @@
+---
+translation:
+  source: Chapters/15-testing.qmd
+  source_sha256: affc6eff99f13079da1edb80f820cbbf2ac7a18f1c857503e9cc15aff6866e53
+  status: complete
+---
+
+# Testausstrategia
+
+## Kolme kerrosta
+
+```
+┌─────────────────┐
+│   Host-testit   │  bitmap, fmt, ring buffer, scope, manifest…
+│ (zig build test)│  normaali std, nopea palaute
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│   QEMU-testit   │  bootti → sarjatulosteväitteet
+│ (boot-test/CI)  │  "Full boot OK" → pass
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│   GDB + QEMU    │  manuaalinen debug kehityksessä
+└─────────────────┘
+```
+
+Host-testit (`tests/host/`, `zig build test`) kattavat puhtaan logiikan: PMM, heap-ydin, capabilityt, portit, ELF-parsinta, VFS, scopet, manifestit, allekirjoitukset ja rekisterit. QEMU-testit (`zig build boot-test`) väittävät sarjalokin rivi riviltä — jokainen tiekartan phase päättyy odotettuun merkkiin, ja CI epäonnistuu kunnes kaikki ilmestyvät.
+
+## Säännöt
+
+- Deterministiset testit ensin; vale-laitteet ennen oikeaa rautaa.
+- Vale-laitteen on mallinnettava oikeaa käytöstä (timeoutit, kilpailut, väärät sekvenssit) — ei koskaan mockia, joka hyväksyy kaiken.
+- Älä koskaan heikennä testiä kehityksen helpottamiseksi; CI-epäonnistumiset ovat dataa.
+- 1.0-porttityövu pysyy punaisena kunnes jokaisella vaatimuksella on evidenssi — epäonnistuva tila on tarkoituksellinen: *emme ole vielä 1.0:ssa*.
+
+## Vian jäljitys
+
+```bash
+zig build test          # nopea: rikkoutuiko puhdas logiikka?
+zig build               # kääntyykö freestanding-kerneli vielä?
+zig build boot-test     # mikä sarjamarkkeri puuttuu?
+```
+
+Ensimmäinen puuttuva markkeri nimeää rikkoutuneen phasen; phasen luku nimeää tiedostot.

@@ -1,0 +1,46 @@
+---
+translation:
+  source: index.qmd
+  source_sha256: ea51841e102e05b86cb9f5e69c40f3ef16eba6338d7fad0e9beb890012076dbb
+  status: complete
+---
+
+# Tervetuloa {.unnumbered}
+
+Tervetuloa! Tämä on avoin kirja **Väinöstä** — kokeellisesta tekoälynatiivista käyttöjärjestelmästä, joka on kirjoitettu lähes kokonaan Zigillä (ytimen lähdekoodi on `Zinux/`-repositoriossa).
+
+Kirjan keskeinen ajatus:
+
+> **Perinteiset käyttöjärjestelmät varastoivat ajureita. Väinö rakentaa tarvitsemansa kyvykkyyden.**
+
+Ja sääntö, joka ohjaa kaikkea:
+
+> **Tekoäly ehdottaa. Kerneli päättää.**
+
+## Tietoa kirjasta {.unnumbered}
+
+Kirja kuvaa Väinö/Zinux-käyttöjärjestelmän: arkkitehtuurin, capability-mallin, plugin-järjestelmän, Linux-yhteensopivuuskerroksen (VSL) sekä käytännön vaiheet rakentamiseen, boottaamiseen ja kokeiluun — QEMU:ssa ja oikealla raudalla.
+
+Jokaiseen osaan kuuluu **labra**: käännät kernelin `zig build`:llä, boottaat sen QEMU:ssa ja havaitset odotetun sarjatulosteen (esimerkiksi `Zinux boot OK`).
+
+## Nimistä {.unnumbered}
+
+- **Väinö** on käyttöjärjestelmän ja sen arkkitehtuurivision nimi.
+- **Zinux** on teknisen kernel-repositorion nimi (Zig + Unix-henkinen). Käytännössä nimet tarkoittavat samaa järjestelmää: kirja käyttää *Väinöä* visiosta ja *Zinuxia* osoittaessaan konkreettisiin lähdetiedostoihin (`kernel/`, `userland/`, `libs/zinuxabi.zig`).
+
+## Lukuohje {.unnumbered}
+
+- Luvut 1–2 selittävät *miksi*: tekoälynatiivi ajurimalli ja tutkimushypoteesi.
+- Luvut 3–9 selittävät *mitä*: bootti, muisti, prosessit, IPC, syscallit, ajurit, käyttäjätila.
+- Luvut 10–13 selittävät *eron*: pluginit, tilannekuvat, VSL ja tekoälygeneroitu rautalogiikka.
+- Luvut 14–17 käsittelevät tietoturvan, testauksen, tien 1.0:aan ja oikean raudan.
+
+Koodilohkoissa näkyy tiedosto, josta ne ovat (esimerkiksi `kernel/mm/pmm.zig`). Polkuja ja tunnisteita ei koskaan käännetä — vain proosa.
+
+## Lisenssi {.unnumbered}
+
+Copyright © 2026 Mikko Huuskonen. Kirja on lisensoitu [CC-BY 4.0 Creative Commons Attribution 4.0 International Public License](https://creativecommons.org/licenses/by/4.0/) -lisenssillä.
+
+![](../Figures/creative-commoms-88x31.png){width=88px}
+
+Quarto-kirjarakenne on mukailtu Pedro Duarte Farian kirjasta [Introduction to Zig](https://github.com/pedropark99/zig-book) (CC-BY 4.0). Käyttöjärjestelmä itse on erillinen projekti lisenssillä GPL-3.0-or-later.

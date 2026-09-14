@@ -1,0 +1,43 @@
+---
+description: "Linux as a replaceable plugin"
+---
+
+# Linux as a plugin (VSL)
+
+**Lab 6.** One of the first major applications of the plugin architecture is **linux-zinux**: decades of Linux hardware support exposed as a replaceable Zinux component — without Zinux becoming Linux.
+
+> Linux becomes one component that Zinux can use.
+
+## Design decision
+
+Three models were evaluated (`docs/VSL_SPEC.md`); syscall translation (WSL1-style) was chosen because it fits current limits (32 slots, 32-byte IPC) with no kernel changes, plus a co-host stub to prove the lifecycle chain. A KVM-style VM host was *rejected for now* and recorded as a negative result — no hidden VM plans.
+
+The translation lives in **user space** (`userland/vsl/linux_abi.zig`): the kernel never learns Linux; VSL learns Zinux.
+
+| Linux nr | Name | Zinux equivalent | Note |
+|----------|------|------------------|------|
+| 0 | read | `SYS_read` (11) | fds 0–2 UART, else `EBADF` for now |
+| 1 | write | `SYS_write` (1) | pass-through |
+| 12 | brk | `SYS_mem_map` (23) | one page per call, memory cap required |
+| 9 | mmap | `SYS_mem_map` (23) | anonymous single page for now |
+| 60 | exit | `SYS_exit` (2) | pass-through |
+| 39 | getpid | `SYS_getpid` (3) | pass-through |
+| 63 | uname | stub (`"VSL"`) | answered by VSL itself |
+
+Unknown numbers return `ENOSYS`. The VSL scope allows ports + memory with `READ|WRITE|SEND|RECV|MAP` — never `GRANT`.
+
+## Manifest, addresses, state
+
+VSL loads as `embedded_id=1` at `0xFFFFFFFF90094000` (stack slot 118), runs in ring 3 printing `vsl`, and unloads like any plugin. VSL-3 added a snapshot-ready state format so a Linux environment can be checkpointed and restored by the core.
+
+Honest limits: only test binaries built against the VSL shim (`vsl_libc.zig`) work; trap-and-emulate of unmodified Linux ELFs is future work (VSL-4). No network — the spec forbids it at this stage.
+
+## Lab 6 — VSL markers
+
+```bash
+zig build boot-test
+# Expected serial lines (among others):
+# vsl / VSL ... OK
+```
+
+The full Linux source tree next to this project (`Fork/VSL/`) serves as reference and fixtures — it is never compiled into the kernel.

@@ -1,0 +1,46 @@
+---
+translation:
+  source: Chapters/12-vsl.qmd
+  source_sha256: 05abe98d66ee9f0535a94319218760897c84eb2ba9dee6e5fe4ae131caf0ee64
+  status: complete
+---
+
+# Linux pluginina (VSL)
+
+**Labra 6.** Yksi plugin-arkkitehtuurin ensimmäisistä suurista sovelluksista on **linux-zinux**: vuosikymmenten Linux-rautatuki vaihdettavana Zinux-komponenttina — ilman että Zinuxista tulee Linux.
+
+> Linuxista tulee yksi komponentti, jota Zinux käyttää.
+
+## Suunnittelupäätös
+
+Kolmea mallia arvioitiin (`docs/VSL_SPEC.md`); syscall-käännös (WSL1-tyyliin) valittiin, koska se sopii nykyrajoihin (32 slottia, 32 tavun IPC) ilman kernel-muutoksia, sekä co-host-stub elinkaariketjun todistamiseen. KVM-tyylinen VM-isäntä *hylättiin toistaiseksi* ja kirjattiin negatiivisena tuloksena — ei piilotettuja VM-suunnitelmia.
+
+Käännös elää **käyttäjätilassa** (`userland/vsl/linux_abi.zig`): kerneli ei opettele Linuxia; VSL opettelee Zinuxia.
+
+| Linux nr | Nimi | Zinux-vastine | Huomio |
+|----------|------|---------------|--------|
+| 0 | read | `SYS_read` (11) | fdt 0–2 UART, muuten toistaiseksi `EBADF` |
+| 1 | write | `SYS_write` (1) | läpimeno |
+| 12 | brk | `SYS_mem_map` (23) | 1 sivu/kutsu, muisti-cap vaaditaan |
+| 9 | mmap | `SYS_mem_map` (23) | toistaiseksi vain anonyymi 1 sivu |
+| 60 | exit | `SYS_exit` (2) | läpimeno |
+| 39 | getpid | `SYS_getpid` (3) | läpimeno |
+| 63 | uname | stub (`"VSL"`) | VSL vastaa itse |
+
+Tuntemattomat numerot palauttavat `ENOSYS`. VSL-scope sallii portit + muistin oikeuksilla `READ|WRITE|SEND|RECV|MAP` — ei koskaan `GRANT`.
+
+## Manifesti, osoitteet, tila
+
+VSL latautuu `embedded_id=1`:llä osoitteeseen `0xFFFFFFFF90094000` (pinon heappi-slotti 118), ajaa ring 3:ssa tulostaen `vsl` ja purkautuu kuten mikä tahansa plugin. VSL-3 toi snapshot-valmiin tilaformaatin, jotta Linux-ympäristön voi checkpointata ja palauttaa ytimellä.
+
+Rehelliset rajat: vain VSL-shimmiä (`vsl_libc.zig`) vasten käännetyt testibinäärit toimivat; muokkaamattomien Linux-ELF:ien trap-and-emulate on tulevaisuutta (VSL-4). Ei verkkoa — speci kieltää sen tässä vaiheessa.
+
+## Labra 6 — VSL-merkit
+
+```bash
+zig build boot-test
+# Odotettuja sarjarivejä (muiden joukossa):
+# vsl / VSL ... OK
+```
+
+Vieressä oleva täysi Linux-lähdepuu (`Fork/VSL/`) toimii referenssinä ja fixtureinä — sitä ei koskaan käännetä kerneliin.

@@ -1,0 +1,43 @@
+---
+translation:
+  source: Chapters/17-real-hardware.qmd
+  source_sha256: 86be806ce9ae81ed4754895b4ceae2de5c3a383290d8d6e71c27d3dda7630f40
+  status: complete
+---
+
+# Oikean raudan ohje
+
+**Labra 7.** QEMU on laboratorio; vanha läppäri on todiste. Tämä luku tiivistää `docs/REAL_HARDWARE.md`:n: vaiheittaisen suunnitelman Väinön boottaamiseen HP Streamille USB-tikulta.
+
+## Mitä luvataan (ja mitä ei)
+
+| Asia | Tila | Syy |
+|------|------|-----|
+| Boot USB:lta, kerneli, muisti, syscallit, pluginit, shell, VSL | Toimii | Ytimessä ei QEMU-riippuvuuksia |
+| Verkko / HTTP-serveri | Ei vielä | Ei NIC-ajuria; vain loopback |
+| Levypersistenssi | Ei vielä | `virtio-blk` on QEMU-only; ei eMMC-ajuria — vain tmpfs (RAM) |
+| Sarjaloki läppärillä | Ei saatavilla | Ei COM-porttia — VGA-ruutu on ainoa konsoli |
+
+Hyödyllinen sivuvaikutus: ilman eMMC/SATA-ajuria kerneli *ei voi* koskea läppärin sisäiseen levyyn. USB-tikun irrottaminen palauttaa koneen normaaliksi — mitään ei koskaan asenneta.
+
+## Stage 0 — tunne rautasi
+
+Windowsissa: `Win + R` → `msinfo32`, kirjaa malli, CPU, BIOS-tila (UEFI/Legacy), Secure Bootin tila ja RAM. Kaikki Stream-mallit ovat 64-bittisiä x86_64-koneita, joille kerneli on kohdistettu. UEFI 64-bit -koneet boottavat ISO:n suoraan; 2014–2016 Atom-mallit 32-bittisellä UEFI:llä tarvitsevat mukana olevan `BOOTIA32.EFI`-polun Liminen kautta.
+
+Ennen rautaan koskemista ota talteen QEMU-referenssiloki (`zig build boot-test`) — sen *pitäisi* näkyä.
+
+## Stage 1 — USB-tikku
+
+Kirjoita `zig build iso`:n ISO tikulle, poista Secure Boot tarvittaessa käytöstä ja boottaa tikku. Odotetut VGA-merkit peilaavat luvun 3 sarjamerkkejä (`Zinux boot OK` ja phase-rivit).
+
+## Vianmääritysmatriisi
+
+| Oire | Todennäköinen syy | Korjaus |
+|------|-------------------|---------|
+| Boot-valikko ei aukea | 32-bittinen UEFI / Secure Boot | Käytä `BOOTIA32.EFI`-polkua; poista Secure Boot |
+| Musta ruutu, mutta USB-aktiivisuutta | UEFI-GOP-tila: kerneli kirjoittaa tekstin `0xB8000`:aan, jota GOP ei välttämättä näytä | Tiedossa oleva rajoite — bootti on voinut onnistua; kokeile Legacy/CSM-tilaa |
+| Jumi varhaisten merkkien jälkeen | Oikean raudan omituisuus (ajastin/IRQ-reititys) | Vertaa QEMU-referenssilokiin; raportoi viimeinen näkyvä merkki |
+
+## Rehelliset rajat
+
+Ei verkkoa eikä levyä vielä — *miksi* ja tiekartta eteenpäin (Realtek-NIC luontevana ajurigenerointikohteena) on dokumentoitu vieressä, ei piilotettu. Läppäri, joka boottaa Väinön, ajaa plugineja VSL mukaan lukien ja palvelee paikallisia demoja näppäimistöltä, on jo täysi todiste arkkitehtuurista.

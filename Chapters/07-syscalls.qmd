@@ -1,0 +1,30 @@
+---
+description: "Syscall mechanism, dispatch, and the shared ABI"
+---
+
+# Syscalls and the ABI
+
+## Mechanism
+
+On x86_64, user space traps with `syscall`/`sysenter` (`kernel/arch/x86_64/syscall.zig`, entry stubs in `kernel/arch/x86_64/syscall_entry.S`). Arguments follow the System V AMD64 ABI (RDI, RSI, RDX, R10, R8, R9); RAX carries the result or a negated errno. The gateway plugin-transfer syscall even uses R10 for its fourth argument because the CPU clobbers RCX.
+
+Numbers are a `Syscall` enum — never magic literals. The shared contract lives in `libs/zinuxabi.zig` (imported by both kernel and userland), including error codes such as `EINVAL`, `EPERM`, `ESRCH`, `ENOMEM`, and `EAGAIN`.
+
+## Dispatch
+
+`kernel/syscall/dispatch.zig` routes each number to a small handler file (`*_syscall.zig`, `*_core.zig` for host-testable logic). Handlers validate the caller's capability slot *before* touching any object, narrow register values with truncation (fail closed), and return precise errors so that rejected callers get useful counterexamples:
+
+```text
+Driver rejected:
+MMIO write at 0x3F9 is outside granted range 0x3F8.
+```
+
+not just `Driver rejected.`
+
+## Ring 3 transition
+
+`kernel/arch/x86_64/usermode.zig` (+ `usermode_entry.S`, `usermode_jump.S`) drops to ring 3 with `iretq` and returns via the syscall path. The Phase 4 milestone was a ring-3 `sys_write("hello")` appearing on serial followed by `Usermode test OK`.
+
+## Fuzzing
+
+Phase 7 added a syscall fuzzer (`kernel/syscall/syscall_fuzz_core.zig`) that throws pseudo-random (LCG) arguments at the interface; the boot log ends that section with `Syscall fuzz OK`.

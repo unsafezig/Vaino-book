@@ -1,0 +1,33 @@
+---
+description: "References"
+---
+
+# References {.unnumbered}
+
+## Book sources (Zinux repository, `docs/`)
+
+- `README.md` — AI-native driver model, snapshots, VSL overview, 1.0 gate
+- `ARCHITECTURE.md` — hybrid microkernel, memory model, IPC, drivers, build
+- `DOCUMENTATION.md` — over-documentation standard
+- `ROADMAP_EN.md` — Phases 0–37 with files and tests
+- `1.0.md` — machine-checked 1.0 requirements
+- `AGENTS.md` — research principles (the method behind this book)
+- `PLUGIN_MODEL.md`, `PLUGIN_SIGNING.md`, `PLUGIN_AUDIT.md`
+- `VSL_SPEC.md` — Väinö Subsystem for Linux
+- `UART.md` — the UART driver experiment (860-line research spec)
+- `HW_CAP_PROTOCOL.md`, `NO_DRIVERS.md`, `SELF_HEAL.md`, `FEDERATION.md`, `EEDEN.md`
+- `REAL_HARDWARE.md` — HP Stream USB-boot guide
+
+## Prior art and inspiration
+
+- Ryzhyk et al., *User-Guided Device Driver Synthesis*, OSDI 2014 (Termite / Termite-2)
+- seL4 microkernel — capability model
+- Limine boot protocol — <https://github.com/limine-bootloader/limine>
+- OSDev Wiki — <https://wiki.osdev.org/>
+- Zig Language Reference — <https://ziglang.org/documentation/master/>
+- Graphene Kernel — Zig hybrid microkernel experiment
+
+## Book infrastructure
+
+- Quarto publishing system — <https://quarto.org/>
+- Structure adapted from Pedro Duarte Faria, *Introduction to Zig: a project-based book* ([zig-book](https://github.com/pedropark99/zig-book), CC-BY 4.0; Finnish fork [zig-book-FI](https://mikko-huuskonen-pro.github.io/zig-book-FI/))

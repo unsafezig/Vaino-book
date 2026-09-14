@@ -1,0 +1,76 @@
+---
+translation:
+  source: Chapters/02-architecture.qmd
+  source_sha256: e818f8ab47831602e50b8d2c1a4ab3a40fa6febb90b4a3844ff36eedea087f9f
+  status: complete
+---
+
+# Arkkitehtuurin yleiskuva
+
+Zinux käyttää **hybridimikrokernel**-mallia (inspiraatio: seL4, Graphene, Fuchsia): pieni luotettu ydin plus eristetyt komponentit, jotka keskustelevat capability-tarkistetun IPC:n kautta.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Käyttäjätila                          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
+│  │  shell   │  │   init   │  │  drivers │  │ plugins  │    │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘    │
+│       └─────────────┴─────────────┴─────────────┘           │
+│                         │ IPC (capability-syscalls)        │
+├─────────────────────────┼───────────────────────────────────┤
+│                    Kernel-rajapinta (syscall)                │
+├─────────────────────────┼───────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Mikrokernel-ydin                        │    │
+│  │  • prosessit & säikeet    • muisti (PMM/VMM)         │    │
+│  │  • aikataulutus           • IPC & capabilityt        │    │
+│  │  • keskeytykset           • ajastin                  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ arch/x86_64  │  │   drivers/   │  │   lib/       │       │
+│  │ (GDT, IDT,   │  │ (VGA, UART,  │  │ (ring buffer,│       │
+│  │  paging,     │  │  keyboard,   │  │  bitmap,     │       │
+│  │  context sw) │  │  timer, PCI) │  │  log, fmt)   │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Suunnitteluperiaatteet
+
+| Periaate | Merkitys |
+|----------|----------|
+| **Lähes 100 % Zig** | Ei erillisiä logiikan `.S`-tiedostoja; inline `asm volatile` vain minne Zig ei yllä (esim. `lgdt`, `iretq`). |
+| **Ylidokumentointi** | Joka rivi perustelee itsensä — ks. `docs/DOCUMENTATION.md`. Kerneli lukemistona kuin oppikirja. |
+| **Selkeys ennen suorituskykyä** | Ensin toimiva, ymmärrettävä koodi; optimointi vasta mittauksen jälkeen. |
+| **Freestanding ensin** | Ei `std`:tä kernelissä; oma moduulipuu. |
+| **Testattavuus** | QEMU-integraatiotestit CI:ssä; host-yksikkötestit missä mahdollista. |
+| **Moniarkkitehtuurivalmius** | Ensin x86_64; rajapinnat abstraktoitu `arch/`-alle. |
+
+## Teknologiavalinnat
+
+| Komponentti | Valinta | Perustelu |
+|-------------|---------|-----------|
+| Kieli | Zig 0.16+ | comptime, eksplisiittiset kokonaisluvut, cross-compile, yksinkertainen build |
+| Bootloader | Limine | UEFI/BIOS, SMP, framebuffer, higher-half valmiina |
+| Kohde | `x86_64-freestanding-none` | Laajin ekosysteemi, QEMU-tuki |
+| Linkkeri | LLD Zigin kautta, `linker.ld` | Higher-half-kerneli |
+| Emulaattori | QEMU 9.x | CI-integraatiotestit |
+| ISO | xorriso + Limine | Bootattava levykuva |
+| Toistettavuus | `.zigversion` + `build.zig.zon` | Lukittu työkaluketju |
+
+## Hakemistokartta
+
+```
+zinux/
+├── build.zig / build.zig.zon / .zigversion
+├── linker.ld / limine.conf
+├── kernel/     # main.zig, boot/, arch/x86_64/, mm/, sched/, ipc/,
+│               # drivers/, syscall/, plugin/, snapshot*.zig, fs/, net/
+├── userland/   # init, shell, lib/, *_test-ELFit, vsl/, composer/
+├── libs/       # zinuxabi.zig — jaettu kernel/user-ABI
+├── tests/      # host/-yksikkötestit, fixtuurit
+├── tools/      # ISO-rakentaja, plugin-varmennin, generaattorit
+└── docs/       # arkkitehtuuri, tiekartta, specit (tämän kirjan lähteet)
+```
+
+Seuraavat luvut kiertävät kartan kerros kerrallaan, aina samassa järjestyksessä: konsepti, mekanismi, tiedostot, labra.

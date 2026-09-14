@@ -1,0 +1,57 @@
+---
+translation:
+  source: Chapters/04-memory.qmd
+  source_sha256: 46a23c6e4062c7d8a5ad65ccdc5d027977e132272b742105d2aa16ec75051c00
+  status: complete
+---
+
+# Muistinhallinta
+
+**Labra 2.** Allokoi kehyksiä, mappaa sivuja, kasvata heappia — ja katso boottilogin todistavan sen.
+
+## Kerrokset
+
+| Kerros | Toteutus | Sijainti |
+|--------|----------|----------|
+| **PMM** (fyysinen) | Bitmap-allokaattori, 4 KiB kehykset | `kernel/mm/pmm.zig` |
+| **VMM** (virtuaalinen) | 4-tasoinen sivutus (PML4→PDPT→PD→PT) | `kernel/mm/vmm.zig` |
+| **Kernel-heap** | Linkitetty lista / slab-allokaattori | `kernel/mm/heap.zig` |
+| **Käyttäjä-heap** | `mmap`-tyylinen syscall | `sys_mem_map` (Phase 28) |
+
+## PMM — bitmap Liminen muistikartan päällä
+
+Bootissa Limine antaa fyysisen muistikartan. PMM merkitsee käyttökelpoiset kehykset vapaiksi, varaa kernelin ja allokoi bitmapilla (`kernel/mm/pmm.zig`, host-testattu):
+
+```zig
+// Konseptuaalinen muoto (dokumentoitu koodi: kernel/mm/pmm.zig)
+pub fn allocFrame() ?u64 {
+    // Etsi ensimmäinen nollabitti, aseta se, palauta kehyksen osoite.
+}
+pub fn freeFrame(frame: u64) void {
+    // Nollaa bitti; kehyksestä tulee uudelleenkäytettävä.
+}
+```
+
+## VMM — neljä tasoa
+
+`kernel/arch/x86_64/paging.zig` rakentaa sivutaulut; `kernel/mm/vmm.zig` mappaa tarvittaessa (`mapPage`, `mapPageEnsure`). Sivuvikat päätyvät IDT-käsittelijään, joka lokittaa CR2:n ja virhekoodin hiljaisen kuoleman sijaan.
+
+## Prosessikohtaiset osoiteavaruudet
+
+Phase 25:stä lähtien jokainen prosessi omistaa sivutaulun (`Process.page_table`, CR3-arvo). ELF-lataaja mappaa ohjelman vain sen omaan tauluun (`setTargetPml4` / `clearTargetPml4`), ja ring-3-siirtymä vaihtaa CR3:n `R9 → CR3`-käytännöllä (`usermode_jump.S`) palauttaen kernel-CR3:n palatessa. Kaksi prosessia voi siis latautua samaan virtuaaliosoitteeseen näkemättä toisiaan — boottitesti todistaa:
+
+```text
+Page table per pid OK
+Address space OK
+```
+
+## Labra 2 — muistimerkit
+
+```bash
+zig build run
+# Odotettuja sarjarivejä (muiden joukossa):
+# PMM initialized, PMM alloc test OK, VMM initialized, Heap initialized
+# Memory map test OK (100 frames), Heap test OK, Zinux boot OK
+```
+
+Täysi sarja (`zig build boot-test`) harjoittaa lisäksi `sys_mem_map`:ia: luo muisti-capabilityn, mappaa yhden sivun ring 3:een, kirjoittaa ja lukee takaisin (`Mem map syscall OK`).

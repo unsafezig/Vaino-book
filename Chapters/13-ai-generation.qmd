@@ -1,0 +1,45 @@
+---
+description: "Plans, validation, and specification burden"
+---
+
+# AI-generated hardware logic
+
+This chapter makes the research method explicit. Everything here follows `docs/AGENTS.md`: prefer the implementation that makes the hypothesis easier to test, measure, and falsify.
+
+## The pipeline
+
+```
+plan → request capabilities → kernel approval → generate code →
+compile → validate → sandbox → run
+```
+
+Three concepts stay separate: **Plan** (what the AI believes it needs), **Policy** (what the kernel allows), **Implementation** (the smallest driver satisfying the approved plan). Generated code is never trusted for being generated — it passes the same validation and capability restrictions as any untrusted code, and the AI cannot modify its own validation rules.
+
+## Driver Plans as first-class objects
+
+Plans should be explicit and machine-readable: task, required resources, requested capabilities, hardware operations, assumptions, known/unknown state, forbidden operations, expected behavior, failure conditions. A plan is a *request*, not permission — and rejections should teach:
+
+```text
+Driver rejected:
+MMIO write at 0x3F9 is outside granted range 0x3F8.
+```
+
+so the AI can revise without bypassing policy.
+
+## Framework over generation
+
+Do not ask the AI to regenerate what Zinux can provide deterministically: registration, lifecycle, capability setup, IPC, allocation, error handling, sandbox setup, discovery, common interfaces. The AI focuses on hardware-specific logic; boilerplate belongs to the framework. If a boilerplate addition teaches nothing about AI-generated hardware logic, it does not belong in generated code.
+
+## Measuring specification burden
+
+The most important metric may be:
+
+> How much human specification is required to produce a working, constrained hardware interface?
+
+Measure where practical: input size, generated vs hardware-specific vs boilerplate size, requested/granted/rejected capabilities, generation success rate, validation and runtime failure rates, recovery after rejection, execution overhead. Record model, version, prompt, documentation, plan, generated source, and results for every experiment — and commit interesting failures. A failed experiment with honest measurements beats a staged success.
+
+## Integrity rules
+
+- Never claim AI generation for hand-written code; label generated, corrected, partial, or human-written honestly.
+- Test invalid behavior deliberately: out-of-range MMIO, denied capabilities, bad register sequences, timeouts, races, malformed plans.
+- Progress Fake device → QEMU → real hardware, and only add features that serve the kernel, the driver model, the hypothesis, or an existing experiment.

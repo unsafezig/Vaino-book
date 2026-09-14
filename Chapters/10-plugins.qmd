@@ -1,0 +1,67 @@
+---
+description: "Capability-bound replaceable components"
+---
+
+# Plugin architecture
+
+**Lab 5.** The core principle:
+
+> **Everything is a plugin.**
+
+A plugin is a replaceable user-space process that extends Zinux without modifying the trusted core — hardware support, filesystems, networking, or compatibility layers. The core stays small (memory, processes, IPC, capabilities, security, lifecycle); everything else is a component.
+
+```
+                 Zinux
+                   │
+            ┌──────▼──────┐
+            │ Zinux Core  │
+            └──────┬──────┘
+                   │
+             Plugin Interface
+                   │
+            ┌──────▼──────┐
+            │   plugin    │
+            └──────┬──────┘
+                   │
+            hardware/service
+```
+
+## Capability-bound plugins
+
+A plugin declares what it needs; the core grants only the approved subset:
+
+```text
+Plugin: camera
+Requested: device.camera, dma, interrupts
+Not granted: filesystem.write, network, microphone, arbitrary_memory
+```
+
+Same rule as drivers: least authority, always.
+
+## Lifecycle and manifest
+
+```
+discover → validate → load → grant capabilities → start →
+running → stop → unload
+```
+
+Each plugin ships a manifest (`userland/plugin_manifest.zig`): name, version, ABI version, required capabilities, provided services, dependencies, architecture, integrity info. The manifest is a *request* — the kernel intersects `manifest ∩ scope` at load and rejects unknown types and reserved rights bits.
+
+Enforcement pieces: `kernel/plugin/scope.zig` (`Scope{pid, allowed_types, allowed_rights, max_caps}`), `kernel/plugin/loader.zig` (8-entry registry), `sys_plugin_load=24` / `sys_plugin_unload=25`, and the cross-plugin gateway `sys_plugin_transfer=26` rooted in the init-pid scope (`kernel/plugin/ns_map.zig`).
+
+## Isolation invariants (I1–I7)
+
+Every plugin has its own pid and slots (no ambient authority), its own address space, scope-subset holdings, no-escalation delegation, manifest-as-request, global revocation, and no silent broadening. See `docs/PLUGIN_MODEL.md`.
+
+## Distribution
+
+Phase 32 added the untrusted-distribution story: Ed25519 signing spec (`docs/PLUGIN_SIGNING.md`), a minimal registry format (`userland/plugin_registry/`), a community audit guide (`docs/PLUGIN_AUDIT.md`), and `zig build plugin-install` with verify-then-copy semantics (tampered packages are rejected, nothing is installed).
+
+## Lab 5 — plugin markers
+
+```bash
+zig build boot-test
+# Expected serial lines (among others):
+# plg / Plugin load OK, Plugin unload OK
+# Plugin manifest caps OK, Plugin IPC gateway OK
+```

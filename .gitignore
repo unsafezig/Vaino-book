@@ -1,0 +1,7 @@
+_site/
+.zig-cache/
+zig-out/
+.quarto/
+
+/.quarto/
+**/*.quarto_ipynb

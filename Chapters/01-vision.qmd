@@ -1,0 +1,95 @@
+---
+description: "Why Väinö generates drivers instead of stocking them"
+---
+
+# The AI-native driver model
+
+Traditional operating systems accumulate drivers over decades. A driver is a permanent software component that must be designed, implemented, tested, and shipped *before* the operating system can use a device.
+
+Väinö asks a different question:
+
+> What if a driver only needs to exist when a task requires it?
+
+## Propose vs decide
+
+A Väinö driver is not necessarily a permanent piece of the operating system. It can be a small, task-specific implementation generated locally by AI and constrained by the kernel:
+
+```
+Hardware
+    │
+    ▼
+Hardware description
+    │
+    ▼
+Local AI
+    │
+    ▼
+Task / Driver Plan
+    │
+    ▼
+Kernel Policy
+    │
+    ├── allowed resources
+    ├── allowed operations
+    └── forbidden operations
+    │
+    ▼
+Generated Driver
+    │
+    ▼
+Validation
+    │
+    ▼
+Sandbox / Capability boundary
+    │
+    ▼
+Hardware
+```
+
+The AI does not receive unrestricted access. It first creates a **plan** describing the smallest set of resources required for the task:
+
+```text
+Task:
+    Read a temperature sensor.
+
+Required:
+    MMIO read: 0x4004
+    Timer: 10 ms
+
+Not required:
+    DMA
+    Network
+    Filesystem
+    Other devices
+    Kernel memory
+    MMIO writes
+```
+
+The kernel then decides which capabilities can actually be granted. **The AI may request a capability, but it cannot grant one to itself.**
+
+## No stored drivers
+
+The long-term rule (see `docs/NO_DRIVERS.md` in Zinux) is:
+
+> Do not store what can safely be constructed when needed.
+
+A bound driver exists only between `generate → bind → exec → destroy`. After `destroy`, no bytes of the driver remain: no `.ko` file, no registry slot, no cached expansion. Re-running the hardware means re-generating — which re-validates against *today's* policy, so stale authority can never outlive its review.
+
+## Standing on shoulders
+
+Väinö does not claim that driver synthesis is new. The Termite project demonstrated driver synthesis from formal specifications, and Termite-2 explored user-guided synthesis. Väinö continues that line of research with today's tools: a local AI turns ordinary hardware documentation plus a task into a constrained driver plan, while the kernel remains the authority.
+
+Nor does Väinö throw away 35 years of Linux hardware support: the VSL plugin (Chapter 12) preserves it as a replaceable component.
+
+> **35 years of engineering is not something to replace. It is something to stand on.**
+
+## What you will learn
+
+By the end of this book you can:
+
+- explain the Plan / Policy / Implementation split,
+- build and boot the kernel in QEMU and on real hardware,
+- trace a syscall from ring 3 through the capability check,
+- load, snapshot, and hot-swap a plugin,
+- run a Linux binary through the VSL compatibility layer,
+- and describe what "Väinö 1.0" must *prove* — not promise.

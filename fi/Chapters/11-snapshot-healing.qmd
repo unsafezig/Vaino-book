@@ -1,0 +1,43 @@
+---
+translation:
+  source: Chapters/11-snapshot-healing.qmd
+  source_sha256: e76743abf61b255a986b5f6341096be6b5287cc8ad86b9f5dbc54721b597d999
+  status: complete
+---
+
+# Tilannekuvat ja itsekorjautuvuus
+
+Pluginit on suunniteltu palautuviksi. Tilannekuvamekanismi kuuluu ytimelle — ei koskaan plugineille itselleen.
+
+## Checkpoint ja restore
+
+Phase 31.5 toi täyden tilan plugin-tilannekuvat:
+
+- `sys_plugin_checkpoint(pid)` (27): kopioi pluginin usersivut PMM-kehyksiin, kirjoitussuojaa originaalit ja kirjaa kirjoitettavuuden.
+- `sys_plugin_restore(pid)` (28): kopioi takaisin tavuvarmennettuna, palauttaen alkuperäiset oikeudet. Toistettava — checkpoint säilyy kunnes poistetaan.
+- Inkrementaaliset tilannekuvat: kirjoitusviat (suojattujen sivujen `#PF`) merkitsevät likaiset sivut; uudelleencheckpoint kopioi vain ne.
+- Watchdog: kaatuminen (esim. puuttuva luku ring 3:ssa) laukaisee automaattisen palautuksen ja diagnostiikan.
+
+```bash
+zig build boot-test
+# Odotettuja sarjarivejä (muiden joukossa):
+# Snapshot walk OK, Snapshot checkpoint OK, Snapshot restore OK
+# Dirty tracking OK, Crash captured, Watchdog restart OK
+```
+
+## Itsekorjautuvuus
+
+Phase 33 rakentaa tilannekuvien päälle: virhediagnostiikka (`kernel/plugin_diag.zig`), in-place-uudelleenlatausmalli tavupaikkauksen sijaan (`docs/SELF_HEAL.md`), validointiputki joka ajaa korjatun pluginin hiekkalaatikossa ennen vaihtoa, sekä hot-swap-orkestrointi (freeze → kill → rename → bridge IPC):
+
+```bash
+# Odotettuja sarjarivejä (muiden joukossa):
+# Plugin diagnostics OK, Plugin heal validation OK, Self-heal OK
+```
+
+## Transaktio
+
+Pitkän aikavälin tavoite on transaktionaalinen plugin-operaatio:
+
+> **Kokeile → Validoi → Commitoi tai peruuta**
+
+Tämä merkitsee eniten juuri siellä, missä tekoälygeneroitu koodi ja ajurit ovat mukana — monimutkaisista ympäristöistä kuten VSL tulee eristettyjä, palautuvia komponentteja ytimen riskien sijaan.

@@ -1,0 +1,56 @@
+---
+translation:
+  source: Chapters/08-drivers.qmd
+  source_sha256: 13cd1d4c2d754cdcf65f46ac727c15e77bad424b9138d5f302fa0e8a551e1417
+  status: complete
+---
+
+# Ajurit
+
+**Labra 4.** Jokainen ajuri on `Driver`-vtable, rekisteröity bootissa comptime-listana (`drivers/registry.zig`):
+
+```zig
+pub const Driver = struct {
+    name: []const u8,
+    init: fn () Error!void,
+    probe: fn () bool,
+    shutdown: fn () void,
+};
+```
+
+## Sisäänrakennetut ajurit
+
+```
+drivers/
+├── bus/
+│   └── pci.zig          // PCI-enumerointi
+├── char/
+│   ├── uart.zig         // COM1-sarjaportti (debug)
+│   └── keyboard.zig     // PS/2-näppäimistö (IRQ1)
+├── video/
+│   ├── vga.zig          // VGA-tekstitila 0xB8000
+│   └── framebuffer.zig  // Limine-framebuffer
+└── timer/
+    └── pit.zig          // 8254 PIT → scheduler-tick
+```
+
+Keskeytyskäsittelijät ovat säännöllä minimaalisia: kuittaa, jonota, palaa — ei allokointia ISR:ssä. Lohkokerros (Phase 6) lisää VirtIO-block-lukijan ja PCI-common-config-pääsyn.
+
+## UART-koe
+
+UART on ensimmäinen *tutkimus*ajuri (ks. `docs/UART.md`), tarkoituksella pieni:
+
+> Lähetä tavu 0x41 UARTin läpi.
+
+Ei sarja-alijärjestelmää — laboratorio koko putkelle: rautadokumentaatio → tekoäly → Driver Plan → capabilityt → generoitu rautalogiikka → validointi → eristys → ajo. Myöhemmät vaiheet lisäävät initin, vastaanoton, keskeytykset, rinnakkaisuuden ja virheenkäsittelyn vasta, kun kunkin vaiheen mittauskysymykset on vastattu.
+
+## Labra 4 — ajurimerkit
+
+```bash
+zig build boot-test
+# Odotettuja sarjarivejä (muiden joukossa):
+# PCI scan OK, VirtIO block read OK
+# Keyboard init/test OK, VFS test OK, tmpfs test OK
+```
+
+Lue sitten `kernel/drivers/char/uart.zig`: se on ylidokumentoidun rautakoodin referenssiesimerkki — jokaisen rekisterin merkitys, järjestysolennainen ja omituisuus on kommentoitu tapahtumapaikalla.

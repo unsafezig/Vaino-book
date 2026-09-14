@@ -1,0 +1,46 @@
+---
+description: "The machine-checked road to 1.0"
+---
+
+# Roadmap to 1.0 and beyond
+
+## The 1.0 Gate
+
+Väinö 1.0 is defined by a machine-checked requirements file (`docs/1.0.md`), verified by GitHub Actions on every change:
+
+```text
+Väinö 1.0 requires:
+
+[ ] Kernel boots on x86_64
+[ ] Interrupt handling works
+[ ] Virtual memory works
+[ ] Processes work
+[ ] IPC works
+[ ] Capability system works
+[ ] Drivers are isolated
+[ ] Local AI can generate a driver
+[ ] Generated driver passes validation
+[ ] UART-test passed
+[ ] Hardware can be dynamically added
+[ ] At least one real robotic device works
+```
+
+Until every box is proven:
+
+```text
+Väinö 1.0    🔴 NOT READY
+```
+
+A requirement is complete only with evidence — an implementation alone never checks a box. The long-term goal is automated tests behind every line, not manual claims.
+
+## Where the project stands
+
+Phases 0–28 built the kernel (boot, memory, processes, syscalls, IPC, userland, drivers, filesystem, hardening). Phases 29–33 built the plugin foundation (sandboxing, load/unload, IPC gateway, snapshots, distribution, self-healing). The Eeden stretch (Phases 34–37) turns the system compositional: declare a task → compose a minimal environment → run → decompose; federate capabilities across machines; generate hardware bindings at runtime; and finally pass the autonomous-lifecycle gate (boot → compose → run 30 days → decompose → core only).
+
+See `docs/ROADMAP_EN.md` for the full phase table with files and tests.
+
+## 1.0 is a state, not a promise
+
+> **1.0 is not a promise. It is a state the system must prove.**
+
+That sentence is the whole development philosophy: small measurable experiments, honest negative results, and a gate that turns green only when the machine says so.

@@ -8,7 +8,7 @@ translation:
 # Arkkitehtuurin yleiskuva
 
 Zinux käyttää **hybridimikrokernel**-mallia (inspiraatio: seL4, Graphene, Fuchsia): pieni luotettu ydin plus eristetyt komponentit, jotka keskustelevat capability-tarkistetun IPC:n kautta.
-Kuva:[https://github.com/unsafezig/Vaino-book/blob/main/pictures/3E0AB16D-7238-4A7E-BD63-B5C817CB0C3D.png]
+![Kuva]:(https://github.com/unsafezig/Vaino-book/blob/main/pictures/3E0AB16D-7238-4A7E-BD63-B5C817CB0C3D.png)
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Käyttäjätila                          │

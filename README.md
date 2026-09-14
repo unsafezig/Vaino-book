@@ -1,5 +1,7 @@
 # Väinö – AI-native OS in Zig / Tekoälynatiivi käyttöjärjestelmä Zigillä
 
+
+https://unsafezig.github.io/Vaino-book/
 Open bilingual book about the Väinö (Zinux) operating system: architecture, capability model, plugins, VSL, and hands-on labs — in English (`Chapters/`) and Finnish (`fi/Chapters/`).
 
 - **Read (GitHub Pages):** root landing page with language selector → `/en/` and `/fi/`
